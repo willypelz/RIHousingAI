@@ -8,7 +8,7 @@ export interface AIProvider {
 
 class AnthropicProvider implements AIProvider {
   readonly name = 'anthropic';
-  constructor(private apiKey: string, private model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514') {}
+  constructor(private apiKey: string, private model = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5') {}
 
   async complete(system: string, user: string, maxTokens = 2048): Promise<string> {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
