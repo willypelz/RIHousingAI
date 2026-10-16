@@ -36,7 +36,7 @@ onMounted(load);
         </h2>
         <div class="progress-track mt-2"><div class="progress-fill" :style="{ width: `${(group.filter(i => i.status === 'complete').length / group.length) * 100}%` }"></div></div>
       </div>
-      <div v-for="item in group" :key="item.id" class="flex items-start gap-3 border-b border-slate-100 py-2 last:border-0">
+      <div v-for="item in group" :key="item.id" class="flex flex-wrap items-start gap-3 border-b border-slate-100 py-2 last:border-0 sm:flex-nowrap">
         <input type="checkbox" class="mt-1" :checked="item.status === 'complete'"
           @change="setStatus(item, ($event.target as HTMLInputElement).checked ? 'complete' : 'pending')" />
         <div class="min-w-0 flex-1">
@@ -51,7 +51,7 @@ onMounted(load);
           </p>
           <p v-if="item.item_type === 'fee' && item.fee_note" class="text-[11px] text-amber-700">💲 {{ item.fee_note }}</p>
         </div>
-        <select class="shrink-0 rounded border border-slate-200 p-1 text-[11px]" :value="item.status"
+        <select class="ml-6 shrink-0 rounded border border-slate-200 p-1 text-[11px] sm:ml-0" :value="item.status"
           @change="setStatus(item, ($event.target as HTMLSelectElement).value)">
           <option value="pending">pending</option><option value="in_progress">in progress</option>
           <option value="complete">complete</option><option value="not_applicable">n/a</option>

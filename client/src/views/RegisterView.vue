@@ -24,7 +24,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="fixed inset-0 flex items-center justify-center overflow-y-auto bg-gradient-to-br from-slate-50 via-brand-50/40 to-slate-50 p-6">
+  <div class="fixed inset-0 flex items-start justify-center overflow-y-auto bg-gradient-to-br from-slate-50 via-brand-50/40 to-slate-50 p-6 sm:items-center">
     <div class="w-full max-w-sm animate-fade-up">
     <h1 class="mb-1 text-center text-2xl font-bold text-slate-900">Create your account</h1>
     <p class="mb-6 text-center text-sm text-slate-500">Start navigating your approval process</p>

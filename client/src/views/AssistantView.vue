@@ -54,16 +54,16 @@ function newConversation() { conversationId.value = null; messages.value = []; l
   <div class="mx-auto max-w-3xl">
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-xl font-bold text-slate-800">AI Approval Assistant</h1>
-      <div class="flex items-center gap-2">
-        <select v-model="projectId" class="input w-64">
+      <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <select v-model="projectId" class="input w-full min-w-0 flex-1 sm:w-64 sm:flex-none">
           <option value="">No project context</option>
           <option v-for="p in projects" :key="p.id" :value="String(p.id)">{{ p.name }}</option>
         </select>
-        <button class="btn-secondary" @click="newConversation">New chat</button>
+        <button class="btn-secondary shrink-0" @click="newConversation">New chat</button>
       </div>
     </div>
 
-    <div ref="scroller" class="card mb-3 h-96 space-y-3 overflow-y-auto">
+    <div ref="scroller" class="card mb-3 h-[55vh] space-y-3 overflow-y-auto sm:h-96">
       <div v-if="!messages.length" class="flex h-full flex-col items-center justify-center text-center text-sm text-slate-500">
         <p class="text-3xl">💬</p>
         <p class="mb-4 mt-2 max-w-sm">Ask about the approval process for your project. Answers are grounded in official sources with citations.</p>

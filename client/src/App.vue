@@ -8,6 +8,7 @@ const auth = useAuthStore();
 const router = useRouter();
 const unread = ref(0);
 const showNotifs = ref(false);
+const showMenu = ref(false);
 const notifications = ref<any[]>([]);
 
 async function loadNotifs() {
@@ -32,15 +33,17 @@ onMounted(loadNotifs);
 <template>
   <div class="min-h-screen">
     <nav v-if="auth.isAuthenticated" class="sticky top-0 z-30 border-b border-brand-950/30 bg-gradient-to-r from-brand-950 via-brand-900 to-slate-900 shadow-lg backdrop-blur">
-      <div class="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2.5">
-        <router-link to="/" class="mr-4 flex items-center gap-2 text-lg font-extrabold tracking-tight text-white">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 py-2.5">
+        <router-link to="/" class="mr-2 flex items-center gap-2 text-lg font-extrabold tracking-tight text-white sm:mr-4">
           <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-400 to-cyan-500 text-sm shadow-soft">🏠</span>
           RIHousing<span class="text-brand-300">AI</span>
         </router-link>
-        <router-link to="/" class="nav-link" :class="{ 'router-link-active': $route.path === '/' || $route.path.startsWith('/projects') }">Projects</router-link>
-        <router-link to="/sources" class="nav-link">Official Sources</router-link>
-        <router-link to="/assistant" class="nav-link">AI Assistant</router-link>
-        <div class="ml-auto flex items-center gap-3">
+        <div class="hidden items-center gap-1 md:flex">
+          <router-link to="/" class="nav-link" :class="{ 'router-link-active': $route.path === '/' || $route.path.startsWith('/projects') }">Projects</router-link>
+          <router-link to="/sources" class="nav-link">Official Sources</router-link>
+          <router-link to="/assistant" class="nav-link">AI Assistant</router-link>
+        </div>
+        <div class="ml-auto flex items-center gap-2 sm:gap-3">
           <div class="relative">
             <button @click="toggleNotifs" class="relative rounded-lg p-1.5 text-brand-100 transition-colors hover:bg-white/10 hover:text-white" aria-label="Notifications">
               🔔<span v-if="unread" class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow">{{ unread }}</span>
@@ -59,7 +62,16 @@ onMounted(loadNotifs);
             <span class="hidden text-xs font-medium text-brand-100 sm:block">{{ auth.user?.name }}</span>
             <span class="hidden text-[10px] text-brand-300 md:block">· {{ auth.user?.role?.replace('_', ' ') }}</span>
           </div>
-          <button @click="logout" class="nav-link">Sign out</button>
+          <button @click="logout" class="nav-link hidden md:block">Sign out</button>
+          <button @click="showMenu = !showMenu" class="rounded-lg p-1.5 text-brand-100 transition-colors hover:bg-white/10 md:hidden" aria-label="Menu">
+            <span v-if="!showMenu">☰</span><span v-else>✕</span>
+          </button>
+        </div>
+        <div v-if="showMenu" class="flex w-full animate-fade-in flex-col gap-1 border-t border-white/10 pb-2 pt-2 md:hidden" @click="showMenu = false">
+          <router-link to="/" class="nav-link">Projects</router-link>
+          <router-link to="/sources" class="nav-link">Official Sources</router-link>
+          <router-link to="/assistant" class="nav-link">AI Assistant</router-link>
+          <button @click="logout" class="nav-link text-left">Sign out</button>
         </div>
       </div>
     </nav>

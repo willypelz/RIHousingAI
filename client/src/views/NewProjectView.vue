@@ -87,9 +87,9 @@ async function submit() {
         <div class="sm:col-span-2"><label class="label">Existing application numbers (if any)</label><input v-model="form.existing_application_numbers" class="input" /></div>
       </div>
       <p v-if="error" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ error }}</p>
-      <div class="flex items-center justify-between border-t border-slate-100 pt-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
         <p class="text-xs text-slate-400">Approvals marked "conditional" until unknown utilities are confirmed.</p>
-        <button class="btn" :disabled="busy">{{ busy ? '⏳ Building approval pathway…' : 'Register project →' }}</button>
+        <button class="btn w-full sm:w-auto" :disabled="busy">{{ busy ? '⏳ Building approval pathway…' : 'Register project →' }}</button>
       </div>
     </form>
   </div>

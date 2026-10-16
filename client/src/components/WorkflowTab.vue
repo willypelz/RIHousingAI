@@ -93,7 +93,7 @@ onMounted(load);
 
       <div class="mt-4 flex flex-wrap gap-2.5">
         <div v-for="s in stagesFor(a.id)" :key="s.id"
-          class="w-56 rounded-xl border p-3 transition-all duration-150 hover:shadow-soft"
+          class="w-full rounded-xl border p-3 transition-all duration-150 hover:shadow-soft sm:w-56"
           :class="s.status === 'active' ? 'border-brand-300 bg-brand-50/40 ring-1 ring-brand-200' : s.status === 'complete' ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white'">
           <div class="flex items-start justify-between gap-1">
             <p class="text-xs font-semibold text-slate-700">{{ s.name }}</p>
