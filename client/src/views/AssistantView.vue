@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue';
 import { api } from '../api/client';
+import { renderMarkdown } from '../lib/markdown';
 
 const projects = ref<any[]>([]);
 const projectId = ref<string>('');
@@ -77,8 +78,8 @@ function newConversation() { conversationId.value = null; messages.value = []; l
           :class="m.role === 'user' ? 'bg-brand-600 text-white' : 'bg-gradient-to-br from-brand-400 to-cyan-500 text-white'">
           {{ m.role === 'user' ? '🙂' : '🤖' }}
         </span>
-        <div class="max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-left text-sm shadow-soft"
-          :class="m.role === 'user' ? 'rounded-br-md bg-gradient-to-b from-brand-600 to-brand-700 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-800'">{{ m.content }}</div>
+        <div v-if="m.role === 'user'" class="max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-gradient-to-b from-brand-600 to-brand-700 px-4 py-2.5 text-left text-sm text-white shadow-soft">{{ m.content }}</div>
+        <div v-else class="max-w-[80%] space-y-0.5 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-2.5 text-left text-sm leading-relaxed text-slate-800 shadow-soft" v-html="renderMarkdown(m.content)"></div>
       </div>
       <div v-if="busy" class="flex items-end gap-2">
         <span class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-cyan-500 text-xs shadow-soft">🤖</span>
