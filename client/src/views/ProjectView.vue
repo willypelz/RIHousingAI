@@ -32,25 +32,31 @@ function downloadReport() {
 
 <template>
   <div v-if="project">
-    <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 class="text-xl font-bold text-slate-800">{{ project.name }}</h1>
-        <p class="text-sm text-slate-500">
-          {{ project.address }}, {{ project.municipality_name }}, RI ·
-          {{ project.units }} units · {{ project.dev_type.replace(/_/g, ' ') }} · {{ project.construction_kind.replace(/_/g, ' ') }}
-        </p>
-        <p v-if="project.sewer_service === 'unknown' || project.water_service === 'unknown'" class="mt-1 text-xs text-amber-600">
-          ⚠ Utility service ({{ [project.sewer_service === 'unknown' ? 'sewer' : '', project.water_service === 'unknown' ? 'water' : ''].filter(Boolean).join(', ') }})
-          is unconfirmed — some approvals are marked conditional until confirmed with the Town.
-        </p>
+    <div class="card mb-6 overflow-hidden !p-0">
+      <div class="h-1.5 bg-gradient-to-r from-indigo-500 via-blue-500 to-sky-400"></div>
+      <div class="flex flex-wrap items-start justify-between gap-3 p-5">
+        <div>
+          <h1 class="text-2xl font-extrabold text-slate-900">{{ project.name }}</h1>
+          <p class="mt-0.5 text-sm text-slate-500">📍 {{ project.address }}, {{ project.municipality_name }}, RI</p>
+          <div class="mt-3 flex flex-wrap gap-2 text-[11px] font-medium">
+            <span class="rounded-md bg-indigo-50 px-2 py-1 text-indigo-700">{{ project.units }} units</span>
+            <span class="rounded-md bg-slate-100 px-2 py-1 text-slate-600">{{ project.dev_type.replace(/_/g, ' ') }}</span>
+            <span class="rounded-md bg-slate-100 px-2 py-1 text-slate-600">{{ project.construction_kind.replace(/_/g, ' ') }}</span>
+            <span class="rounded-md bg-blue-50 px-2 py-1 text-blue-700">{{ project.status.replace(/_/g, ' ') }}</span>
+          </div>
+          <p v-if="project.sewer_service === 'unknown' || project.water_service === 'unknown'" class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            ⚠ Utility service ({{ [project.sewer_service === 'unknown' ? 'sewer' : '', project.water_service === 'unknown' ? 'water' : ''].filter(Boolean).join(', ') }})
+            is unconfirmed — some approvals are marked conditional until confirmed with the Town.
+          </p>
+        </div>
+        <button class="btn-secondary" @click="downloadReport">⬇ Status report</button>
       </div>
-      <button class="btn-secondary" @click="downloadReport">⬇ Status report</button>
     </div>
 
-    <div class="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
+    <div class="mb-6 flex gap-1.5 overflow-x-auto rounded-xl bg-slate-100 p-1">
       <button v-for="t in tabs" :key="t.id" @click="tab = t.id"
-        class="whitespace-nowrap px-4 py-2 text-sm font-medium"
-        :class="tab === t.id ? 'border-b-2 border-blue-700 text-blue-700' : 'text-slate-500 hover:text-slate-700'">
+        class="whitespace-nowrap rounded-lg px-4 py-1.5 text-sm font-semibold transition-all duration-150"
+        :class="tab === t.id ? 'bg-white text-indigo-700 shadow-soft' : 'text-slate-500 hover:text-slate-700'">
         {{ t.label }}
       </button>
     </div>

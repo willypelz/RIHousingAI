@@ -31,34 +31,44 @@ onMounted(loadNotifs);
 
 <template>
   <div class="min-h-screen">
-    <nav v-if="auth.isAuthenticated" class="bg-blue-900 text-white">
-      <div class="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
-        <router-link to="/" class="text-lg font-bold">RIHousing<span class="text-blue-300">AI</span></router-link>
-        <router-link to="/" class="text-sm text-blue-100 hover:text-white">Projects</router-link>
-        <router-link to="/sources" class="text-sm text-blue-100 hover:text-white">Official Sources</router-link>
-        <router-link to="/assistant" class="text-sm text-blue-100 hover:text-white">AI Assistant</router-link>
-        <div class="ml-auto flex items-center gap-4">
+    <nav v-if="auth.isAuthenticated" class="sticky top-0 z-30 border-b border-indigo-950/30 bg-gradient-to-r from-indigo-950 via-blue-900 to-indigo-900 shadow-lg backdrop-blur">
+      <div class="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2.5">
+        <router-link to="/" class="mr-4 flex items-center gap-2 text-lg font-extrabold tracking-tight text-white">
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-400 to-blue-500 text-sm shadow-soft">🏠</span>
+          RIHousing<span class="text-indigo-300">AI</span>
+        </router-link>
+        <router-link to="/" class="nav-link" :class="{ 'router-link-active': $route.path === '/' || $route.path.startsWith('/projects') }">Projects</router-link>
+        <router-link to="/sources" class="nav-link">Official Sources</router-link>
+        <router-link to="/assistant" class="nav-link">AI Assistant</router-link>
+        <div class="ml-auto flex items-center gap-3">
           <div class="relative">
-            <button @click="toggleNotifs" class="relative text-sm text-blue-100 hover:text-white">
-              🔔<span v-if="unread" class="absolute -right-2 -top-1 rounded-full bg-red-500 px-1.5 text-xs">{{ unread }}</span>
+            <button @click="toggleNotifs" class="relative rounded-lg p-1.5 text-indigo-100 transition-colors hover:bg-white/10 hover:text-white" aria-label="Notifications">
+              🔔<span v-if="unread" class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow">{{ unread }}</span>
             </button>
-            <div v-if="showNotifs" class="absolute right-0 z-20 mt-2 w-80 rounded-lg border border-slate-200 bg-white p-2 text-slate-800 shadow-lg">
-              <p v-if="!notifications.length" class="p-2 text-sm text-slate-500">No notifications</p>
-              <div v-for="n in notifications.slice(0, 10)" :key="n.id" class="border-b border-slate-100 p-2 text-xs last:border-0">
+            <div v-if="showNotifs" class="absolute right-0 z-20 mt-2 w-80 animate-fade-up rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-lift">
+              <p class="px-2 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">Notifications</p>
+              <p v-if="!notifications.length" class="p-3 text-sm text-slate-500">You're all caught up 🎉</p>
+              <div v-for="n in notifications.slice(0, 10)" :key="n.id" class="rounded-lg p-2.5 text-xs transition-colors hover:bg-slate-50">
                 {{ n.message }}
-                <div class="text-slate-400">{{ new Date(n.created_at).toLocaleString() }}</div>
+                <div class="mt-0.5 text-[10px] text-slate-400">{{ new Date(n.created_at).toLocaleString() }}</div>
               </div>
             </div>
           </div>
-          <span class="text-xs text-blue-200">{{ auth.user?.name }} ({{ auth.user?.role?.replace('_', ' ') }})</span>
-          <button @click="logout" class="text-sm text-blue-100 hover:text-white">Sign out</button>
+          <div class="flex items-center gap-2 rounded-full bg-white/10 py-1 pl-1 pr-3">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-blue-500 text-[11px] font-bold text-white">{{ auth.user?.name?.charAt(0)?.toUpperCase() }}</span>
+            <span class="hidden text-xs font-medium text-indigo-100 sm:block">{{ auth.user?.name }}</span>
+            <span class="hidden text-[10px] text-indigo-300 md:block">· {{ auth.user?.role?.replace('_', ' ') }}</span>
+          </div>
+          <button @click="logout" class="nav-link">Sign out</button>
         </div>
       </div>
     </nav>
-    <main class="mx-auto max-w-6xl px-4 py-6">
-      <router-view />
+    <main class="mx-auto max-w-6xl px-4 py-8">
+      <router-view v-slot="{ Component }">
+        <component :is="Component" class="animate-fade-up" />
+      </router-view>
     </main>
-    <footer v-if="auth.isAuthenticated" class="mx-auto max-w-6xl px-4 pb-6 text-xs text-slate-400">
+    <footer v-if="auth.isAuthenticated" class="mx-auto max-w-6xl border-t border-slate-200 px-4 py-5 text-xs leading-relaxed text-slate-400">
       RIHousingAI provides administrative navigation assistance only. It does not perform zoning analysis or make approval decisions.
       Verify all requirements, fees, and deadlines with the responsible authorities.
     </footer>

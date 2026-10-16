@@ -36,8 +36,10 @@ async function submit() {
 
 <template>
   <div class="mx-auto max-w-2xl">
-    <h1 class="mb-4 text-xl font-bold text-slate-800">Register a Project</h1>
-    <form class="card space-y-4" @submit.prevent="submit">
+    <h1 class="text-2xl font-extrabold text-slate-900">Register a Project</h1>
+    <p class="mb-6 mt-1 text-sm text-slate-500">We'll generate a source-backed approval pathway for your project automatically.</p>
+    <form class="card space-y-6 !p-6" @submit.prevent="submit">
+      <p class="section-title">Project details</p>
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="sm:col-span-2"><label class="label">Project name</label><input v-model="form.name" required class="input" placeholder="e.g. Mendon Road Residences" /></div>
         <div><label class="label">Street address</label><input v-model="form.address" required class="input" /></div>
@@ -75,14 +77,20 @@ async function submit() {
           </select>
         </div>
         <div class="sm:col-span-2"><label class="label">Project description</label><textarea v-model="form.description" rows="3" class="input"></textarea></div>
+      </div>
+      <p class="section-title border-t border-slate-100 pt-5">Applicant & representative</p>
+      <div class="grid gap-4 sm:grid-cols-2">
         <div><label class="label">Applicant name</label><input v-model="form.applicant_name" required class="input" /></div>
         <div><label class="label">Applicant email</label><input v-model="form.applicant_email" type="email" class="input" /></div>
         <div><label class="label">Applicant phone</label><input v-model="form.applicant_phone" class="input" /></div>
         <div><label class="label">Representative (optional)</label><input v-model="form.representative_name" class="input" /></div>
         <div class="sm:col-span-2"><label class="label">Existing application numbers (if any)</label><input v-model="form.existing_application_numbers" class="input" /></div>
       </div>
-      <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
-      <button class="btn" :disabled="busy">{{ busy ? 'Creating & building approval pathway…' : 'Register project' }}</button>
+      <p v-if="error" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ error }}</p>
+      <div class="flex items-center justify-between border-t border-slate-100 pt-4">
+        <p class="text-xs text-slate-400">Approvals marked "conditional" until unknown utilities are confirmed.</p>
+        <button class="btn" :disabled="busy">{{ busy ? '⏳ Building approval pathway…' : 'Register project →' }}</button>
+      </div>
     </form>
   </div>
 </template>

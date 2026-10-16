@@ -16,15 +16,32 @@ async function submit() {
 </script>
 
 <template>
-  <div class="mx-auto mt-16 max-w-sm">
-    <h1 class="mb-1 text-center text-2xl font-bold text-blue-900">RIHousing<span class="text-blue-500">AI</span></h1>
-    <p class="mb-6 text-center text-sm text-slate-500">Rhode Island housing approval navigation</p>
-    <form class="card space-y-4" @submit.prevent="submit">
-      <div><label class="label">Email</label><input v-model="email" type="email" required class="input" /></div>
-      <div><label class="label">Password</label><input v-model="password" type="password" required class="input" /></div>
-      <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
-      <button class="btn w-full justify-center" :disabled="busy">Sign in</button>
-      <p class="text-center text-sm text-slate-500">No account? <router-link to="/register" class="text-blue-700 hover:underline">Register</router-link></p>
-    </form>
+  <div class="fixed inset-0 flex">
+    <div class="hidden flex-1 flex-col justify-between bg-gradient-to-br from-indigo-950 via-blue-900 to-indigo-800 p-10 text-white lg:flex">
+      <div class="text-xl font-extrabold tracking-tight">🏠 RIHousing<span class="text-indigo-300">AI</span></div>
+      <div class="animate-fade-up">
+        <h1 class="text-4xl font-extrabold leading-tight tracking-tight">Navigate Rhode Island<br />housing approvals<br /><span class="bg-gradient-to-r from-indigo-300 to-sky-300 bg-clip-text text-transparent">with confidence.</span></h1>
+        <p class="mt-4 max-w-md text-sm leading-relaxed text-indigo-200">Source-backed checklists, workflow tracking, AI completeness checks, and an assistant grounded in official municipal and state procedures.</p>
+        <div class="mt-6 flex gap-6 text-xs text-indigo-300">
+          <div><p class="text-2xl font-bold text-white">39</p>municipalities modeled</div>
+          <div><p class="text-2xl font-bold text-white">100%</p>source-cited guidance</div>
+          <div><p class="text-2xl font-bold text-white">0</p>invented fees or deadlines</div>
+        </div>
+      </div>
+      <p class="text-xs text-indigo-400">Administrative navigation only — not zoning analysis or approval decisions.</p>
+    </div>
+    <div class="flex flex-1 items-center justify-center bg-slate-50 p-6">
+      <div class="w-full max-w-sm animate-fade-up">
+        <h2 class="mb-1 text-2xl font-bold text-slate-900">Welcome back</h2>
+        <p class="mb-6 text-sm text-slate-500">Sign in to your workspace</p>
+        <form class="card space-y-4 !p-6" @submit.prevent="submit">
+          <div><label class="label">Email</label><input v-model="email" type="email" required class="input" placeholder="you@example.com" /></div>
+          <div><label class="label">Password</label><input v-model="password" type="password" required class="input" placeholder="••••••••" /></div>
+          <p v-if="error" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ error }}</p>
+          <button class="btn w-full" :disabled="busy">{{ busy ? 'Signing in…' : 'Sign in' }}</button>
+          <p class="text-center text-sm text-slate-500">No account? <router-link to="/register" class="font-semibold text-indigo-600 hover:underline">Register</router-link></p>
+        </form>
+      </div>
+    </div>
   </div>
 </template>

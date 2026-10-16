@@ -30,9 +30,12 @@ onMounted(load);
       Each item cites its official source. Fee amounts are never estimated by this platform — confirm current fees with the cited authority before submitting.
     </div>
     <div v-for="(group, approval) in grouped" :key="approval" class="card">
-      <h2 class="mb-3 font-semibold text-slate-800">{{ approval }}
-        <span class="ml-2 text-xs font-normal text-slate-400">{{ group.filter(i => i.status === 'complete').length }}/{{ group.length }} complete</span>
-      </h2>
+      <div class="mb-3">
+        <h2 class="font-bold text-slate-900">{{ approval }}
+          <span class="ml-2 text-xs font-normal text-slate-400">{{ group.filter(i => i.status === 'complete').length }}/{{ group.length }} complete</span>
+        </h2>
+        <div class="progress-track mt-2"><div class="progress-fill" :style="{ width: `${(group.filter(i => i.status === 'complete').length / group.length) * 100}%` }"></div></div>
+      </div>
       <div v-for="item in group" :key="item.id" class="flex items-start gap-3 border-b border-slate-100 py-2 last:border-0">
         <input type="checkbox" class="mt-1" :checked="item.status === 'complete'"
           @change="setStatus(item, ($event.target as HTMLInputElement).checked ? 'complete' : 'pending')" />

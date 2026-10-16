@@ -24,9 +24,11 @@ async function submit() {
 </script>
 
 <template>
-  <div class="mx-auto mt-16 max-w-sm">
-    <h1 class="mb-6 text-center text-2xl font-bold text-blue-900">Create account</h1>
-    <form class="card space-y-4" @submit.prevent="submit">
+  <div class="fixed inset-0 flex items-center justify-center overflow-y-auto bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-50 p-6">
+    <div class="w-full max-w-sm animate-fade-up">
+    <h1 class="mb-1 text-center text-2xl font-bold text-slate-900">Create your account</h1>
+    <p class="mb-6 text-center text-sm text-slate-500">Start navigating your approval process</p>
+    <form class="card space-y-4 !p-6" @submit.prevent="submit">
       <div><label class="label">Full name</label><input v-model="form.name" required class="input" /></div>
       <div><label class="label">Email</label><input v-model="form.email" type="email" required class="input" /></div>
       <div><label class="label">Password (min 8 chars)</label><input v-model="form.password" type="password" minlength="8" required class="input" /></div>
@@ -34,9 +36,10 @@ async function submit() {
         <select v-model="form.role" class="input"><option v-for="r in roles" :key="r.value" :value="r.value">{{ r.label }}</option></select>
         <p class="mt-1 text-xs text-slate-400">Municipal staff accounts are provisioned by administrators.</p>
       </div>
-      <p v-if="error" class="text-sm text-red-600">{{ error }}</p>
-      <button class="btn w-full justify-center" :disabled="busy">Register</button>
-      <p class="text-center text-sm text-slate-500">Have an account? <router-link to="/login" class="text-blue-700 hover:underline">Sign in</router-link></p>
+      <p v-if="error" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ error }}</p>
+      <button class="btn w-full" :disabled="busy">{{ busy ? 'Creating account…' : 'Register' }}</button>
+      <p class="text-center text-sm text-slate-500">Have an account? <router-link to="/login" class="font-semibold text-indigo-600 hover:underline">Sign in</router-link></p>
     </form>
+    </div>
   </div>
 </template>

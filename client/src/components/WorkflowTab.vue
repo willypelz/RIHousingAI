@@ -55,12 +55,15 @@ onMounted(load);
 
     <!-- Summary -->
     <div class="grid gap-3 sm:grid-cols-3">
-      <div class="card"><p class="text-xs text-slate-500">Checklist</p>
-        <p class="text-lg font-bold">{{ progress.checklist.done }} done · {{ progress.checklist.outstanding }} outstanding</p></div>
-      <div class="card"><p class="text-xs text-slate-500">Open tasks</p>
-        <p class="text-lg font-bold">{{ progress.tasks.length }}</p></div>
-      <div class="card"><p class="text-xs text-slate-500">Potential bottlenecks</p>
-        <p class="text-lg font-bold">{{ progress.bottlenecks.length }}</p></div>
+      <div class="card">
+        <p class="section-title">Checklist</p>
+        <p class="mt-1 text-xl font-extrabold text-slate-900">{{ progress.checklist.done }} <span class="text-sm font-medium text-slate-400">done</span> · {{ progress.checklist.outstanding }} <span class="text-sm font-medium text-slate-400">left</span></p>
+        <div class="progress-track mt-2"><div class="progress-fill" :style="{ width: `${(Number(progress.checklist.done) / Math.max(1, Number(progress.checklist.done) + Number(progress.checklist.outstanding))) * 100}%` }"></div></div>
+      </div>
+      <div class="card"><p class="section-title">Open tasks</p>
+        <p class="mt-1 text-xl font-extrabold text-slate-900">{{ progress.tasks.length }}</p></div>
+      <div class="card"><p class="section-title">Potential bottlenecks</p>
+        <p class="mt-1 text-xl font-extrabold" :class="progress.bottlenecks.length ? 'text-amber-600' : 'text-slate-900'">{{ progress.bottlenecks.length }}</p></div>
     </div>
 
     <div v-if="progress.bottlenecks.length" class="card border-amber-300 bg-amber-50">
@@ -88,8 +91,10 @@ onMounted(load);
       </p>
       <p v-if="a.processing_estimate" class="mt-1 text-xs text-slate-500">📋 Published estimate: {{ a.processing_estimate }}</p>
 
-      <div class="mt-3 flex flex-wrap gap-2">
-        <div v-for="s in stagesFor(a.id)" :key="s.id" class="w-56 rounded-md border border-slate-200 p-2">
+      <div class="mt-4 flex flex-wrap gap-2.5">
+        <div v-for="s in stagesFor(a.id)" :key="s.id"
+          class="w-56 rounded-xl border p-3 transition-all duration-150 hover:shadow-soft"
+          :class="s.status === 'active' ? 'border-indigo-300 bg-indigo-50/40 ring-1 ring-indigo-200' : s.status === 'complete' ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white'">
           <div class="flex items-start justify-between gap-1">
             <p class="text-xs font-semibold text-slate-700">{{ s.name }}</p>
             <span class="badge shrink-0" :class="STATUS_COLORS[s.status]">{{ s.status.replace(/_/g, ' ') }}</span>
