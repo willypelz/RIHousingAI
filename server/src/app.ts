@@ -1,4 +1,5 @@
 import express from 'express';
+import 'express-async-errors';
 import cors from 'cors';
 import { authRouter } from './modules/auth.js';
 import { projectsRouter, municipalitiesRouter } from './modules/projects.js';

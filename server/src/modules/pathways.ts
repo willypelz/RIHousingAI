@@ -156,11 +156,11 @@ pathwaysRouter.patch('/:projectId/checklist/:itemId', requireProjectAccess(), as
     return res.status(400).json({ error: 'Invalid status' });
   }
   const { rows } = await query(
-    `UPDATE checklist_items ci SET status=$1,
-       completed_at = CASE WHEN $1='complete' THEN now() ELSE NULL END,
-       completed_by = CASE WHEN $1='complete' THEN $2 ELSE NULL END
+    `UPDATE checklist_items ci SET status=$1::text,
+       completed_at = CASE WHEN $1::text='complete' THEN now() ELSE NULL END,
+       completed_by = CASE WHEN $1::text='complete' THEN $2::int ELSE NULL END
      FROM project_approvals pa
-     WHERE ci.id=$3 AND pa.id=ci.project_approval_id AND pa.project_id=$4
+     WHERE ci.id=$3::int AND pa.id=ci.project_approval_id AND pa.project_id=$4::int
      RETURNING ci.*`,
     [status, req.user!.id, req.params.itemId, req.params.projectId]
   );
