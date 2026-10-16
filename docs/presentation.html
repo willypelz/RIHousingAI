@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RIHousingAI — Presentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand-50:#effbfa;--brand-100:#d5f3f2;--brand-300:#79d1d6;--brand-400:#3eb3bd;
+  --brand-500:#2396a3;--brand-600:#1e7a8a;--brand-700:#1e6271;--brand-900:#1f444f;--brand-950:#0d2b35;
+  --slate-400:#94a3b8;--slate-500:#64748b;--slate-700:#334155;--slate-900:#0f172a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:#0a1f27;color:#fff;overflow:hidden}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;padding:6vw 8vw;background:linear-gradient(135deg,var(--brand-950) 0%,#122f3a 60%,var(--brand-900) 100%)}
+.slide.active{display:flex;animation:slidein .45s ease-out}
+@keyframes slidein{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.slide.light{background:#f8fafc;color:var(--slate-900)}
+.kicker{font-size:.85rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--brand-300);margin-bottom:1rem}
+.light .kicker{color:var(--brand-600)}
+h1{font-size:3.6rem;font-weight:900;letter-spacing:-.03em;line-height:1.05}
+h2{font-size:2.4rem;font-weight:800;letter-spacing:-.02em;margin-bottom:1.6rem}
+.grad{background:linear-gradient(90deg,var(--brand-300),#7dd3fc);-webkit-background-clip:text;background-clip:text;color:transparent}
+.light .grad{background:linear-gradient(90deg,var(--brand-600),#0284c7);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:1.15rem;color:#b7d4d8;margin-top:1.2rem;max-width:46rem;line-height:1.6}
+.light .sub{color:var(--slate-500)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.1rem;margin-top:.4rem}
+.cardx{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:1.2rem 1.3rem;backdrop-filter:blur(4px)}
+.light .cardx{background:#fff;border:1px solid #e2e8f0;box-shadow:0 4px 14px rgba(15,23,42,.06)}
+.cardx h3{font-size:1.02rem;font-weight:700;margin-bottom:.45rem;display:flex;align-items:center;gap:.5rem}
+.cardx p,.cardx li{font-size:.86rem;line-height:1.55;color:#c7dde0}
+.light .cardx p,.light .cardx li{color:var(--slate-500)}
+.cardx ul{padding-left:1.1rem;margin-top:.3rem}
+.stats{display:flex;gap:3rem;margin-top:2.4rem;flex-wrap:wrap}
+.stats b{display:block;font-size:2.6rem;font-weight:900;color:#fff}
+.light .stats b{color:var(--slate-900)}
+.stats span{font-size:.85rem;color:var(--brand-300)}
+.light .stats span{color:var(--brand-600)}
+.flow{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.5rem}
+.step{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);padding:.65rem 1rem;border-radius:999px;font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:.5rem}
+.light .step{background:var(--brand-50);border-color:var(--brand-100);color:var(--brand-700)}
+.step .n{background:var(--brand-500);color:#fff;width:1.35rem;height:1.35rem;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex:none}
+.badge{display:inline-block;background:rgba(62,179,189,.18);color:var(--brand-300);border:1px solid rgba(62,179,189,.4);padding:.3rem .8rem;border-radius:999px;font-size:.78rem;font-weight:700;margin:.2rem .25rem .2rem 0}
+.light .badge{background:var(--brand-50);color:var(--brand-700);border-color:var(--brand-100)}
+.footer-note{position:absolute;bottom:2.2rem;left:8vw;right:8vw;display:flex;justify-content:space-between;font-size:.75rem;color:rgba(255,255,255,.4)}
+.light .footer-note{color:var(--slate-400)}
+.nav{position:fixed;bottom:1.1rem;right:1.3rem;z-index:10;display:flex;gap:.4rem;align-items:center;font-size:.8rem;color:rgba(255,255,255,.6)}
+.nav button{background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:10px;padding:.5rem .8rem;cursor:pointer;font-size:1rem}
+.nav button:hover{background:rgba(255,255,255,.25)}
+.logo{display:flex;align-items:center;gap:.6rem;font-weight:800;font-size:1.1rem;margin-bottom:2.5rem}
+.logo .mark{width:2.2rem;height:2.2rem;border-radius:12px;background:linear-gradient(135deg,var(--brand-400),#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+a{color:var(--brand-300)}
+.light a{color:var(--brand-600)}
+@media (max-width:700px){h1{font-size:2.2rem}h2{font-size:1.6rem}.stats{gap:1.5rem}}
+@media print{
+  body{overflow:visible;background:#fff}
+  .slide{display:flex!important;position:relative;height:100vh;page-break-after:always;animation:none}
+  .nav{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- 1 · Title -->
+<section class="slide active">
+  <div class="logo"><span class="mark">🏠</span>RIHousing<span style="color:var(--brand-300)">AI</span></div>
+  <h1>Navigate Rhode Island<br>housing approvals<br><span class="grad">with confidence.</span></h1>
+  <p class="sub">An AI-powered platform that guides residential developers through the administrative approval process — source-backed checklists, workflow tracking, document completeness checks, and a grounded AI assistant.</p>
+  <div class="stats">
+    <div><b>39</b><span>RI municipalities modeled</span></div>
+    <div><b>100%</b><span>source-cited guidance</span></div>
+    <div><b>0</b><span>invented fees or deadlines</span></div>
+  </div>
+  <div class="footer-note"><span>RIHousingAI · 2026</span><span>→ arrow keys or click to navigate</span></div>
+</section>
+
+<!-- 2 · Problem -->
+<section class="slide light">
+  <p class="kicker">The Problem</p>
+  <h2>Housing approvals are a <span class="grad">maze.</span></h2>
+  <div class="cols">
+    <div class="cardx"><h3>🧩 Fragmented process</h3><p>A single 10-unit project can require planning board review, building permits, fire plan review, sewer &amp; water approvals, state environmental permits, and inspections — each with its own authority, forms, and sequence.</p></div>
+    <div class="cardx"><h3>📄 Opaque requirements</h3><p>Requirements live across municipal websites, PDFs, and state statutes (RIGL 45-23). Applicants discover missing documents only after rejection — losing weeks per review cycle.</p></div>
+    <div class="cardx"><h3>⏱ No visibility</h3><p>Once submitted, applicants can't see where their application stands, what's blocking it, or who needs to act next.</p></div>
+  </div>
+  <p class="sub">Rhode Island needs housing. Administrative friction shouldn't be the bottleneck.</p>
+</section>
+
+<!-- 3 · Solution -->
+<section class="slide">
+  <p class="kicker">The Solution</p>
+  <h2>One workspace for the <span class="grad">entire approval journey.</span></h2>
+  <div class="flow">
+    <span class="step"><span class="n">1</span>Register project</span>
+    <span class="step"><span class="n">2</span>Auto-generated approval pathway</span>
+    <span class="step"><span class="n">3</span>Source-cited checklist</span>
+    <span class="step"><span class="n">4</span>Upload documents</span>
+    <span class="step"><span class="n">5</span>AI completeness check</span>
+    <span class="step"><span class="n">6</span>Track stages &amp; reviews</span>
+    <span class="step"><span class="n">7</span>Record decisions &amp; conditions</span>
+    <span class="step"><span class="n">8</span>Inspections → Certificate of Occupancy</span>
+  </div>
+  <p class="sub">Register a 10-unit development in Cumberland and instantly see every applicable approval, the responsible authority, required documents, fee sources, and what to do next — all cited to official government sources.</p>
+</section>
+
+<!-- 4 · Core features -->
+<section class="slide light">
+  <p class="kicker">Core Features</p>
+  <h2>Built for how approvals <span class="grad">actually work.</span></h2>
+  <div class="cols">
+    <div class="cardx"><h3>🧭 Pathway engine</h3><p>Rule-based applicability: never assumes every approval applies. Unknown facts (e.g. sewer service) yield "conditional — confirm with DPW," not guesses.</p></div>
+    <div class="cardx"><h3>✅ Smart checklists</h3><p>Every item cites an official source with verification date. Fee items link to the fee schedule authority — amounts are never invented.</p></div>
+    <div class="cardx"><h3>🔀 Workflow dashboard</h3><p>Stages with explicit dependencies and parallel tracks. Completing a stage auto-activates the next. Nothing is "overdue" without a verified, cited deadline.</p></div>
+    <div class="cardx"><h3>📁 Document management</h3><p>Versioned uploads with SHA-256 integrity, auto-categorization, and per-checklist-item linking.</p></div>
+    <div class="cardx"><h3>🏛 Review coordination</h3><p>Record agency comments and RAIs (auto-creates tasks + notifications), draft responses, track decisions, conditions, and inspections.</p></div>
+    <div class="cardx"><h3>🔐 Roles &amp; audit</h3><p>Six user roles with project-level access control, JWT auth, and a full audit log of every action.</p></div>
+  </div>
+</section>
+
+<!-- 5 · AI -->
+<section class="slide">
+  <p class="kicker">AI Capabilities</p>
+  <h2>AI that <span class="grad">cites its sources.</span></h2>
+  <div class="cols">
+    <div class="cardx"><h3>💬 Approval assistant</h3><p>Floating chat on every page with automatic project context. Answers are grounded via RAG over a curated database of official sources — every claim links to the authority, with verification dates.</p></div>
+    <div class="cardx"><h3>🔍 Completeness checker</h3><p>Two-pass analysis: deterministic rules (missing uploads, unit-count mismatches, missing signatures) + Claude reviewing extracted PDF text against the official checklist. Every finding must include verbatim evidence.</p></div>
+    <div class="cardx"><h3>✍️ Draft responses</h3><p>AI-drafted replies to agency review comments — always marked DRAFT and requiring professional review before submission.</p></div>
+  </div>
+  <div style="margin-top:1.6rem">
+    <span class="badge">No zoning analysis</span>
+    <span class="badge">No invented fees or deadlines</span>
+    <span class="badge">No approval predictions</span>
+    <span class="badge">Uncertainty → "contact the authority"</span>
+    <span class="badge">Works without an API key (rule-based fallback)</span>
+  </div>
+</section>
+
+<!-- 6 · Demo scenario -->
+<section class="slide light">
+  <p class="kicker">Demo Scenario</p>
+  <h2>10 units on Mendon Road, <span class="grad">Cumberland RI.</span></h2>
+  <div class="cols">
+    <div class="cardx"><h3>Instantly identified</h3><ul>
+      <li><b>Applicable:</b> Major Land Development Review (Planning Board), Building Permit, Fire &amp; Life-Safety Review, Sewer + Water connections, E-911 addressing, Inspections &amp; CO</li>
+      <li><b>Conditional:</b> RIPDES stormwater (only if ≥1 acre disturbed)</li>
+      <li><b>Not applicable:</b> RIDEM OWTS — the parcel is on public sewer</li></ul></div>
+    <div class="cardx"><h3>Generated automatically</h3><ul>
+      <li>31 checklist items across 8 approvals — all source-cited</li>
+      <li>37 review stages with 32 explicit dependencies</li>
+      <li>Statutory context: 25-day completeness certification under RIGL 45-23, shown as a published period — not a promise</li></ul></div>
+  </div>
+  <p class="sub">Agency contacts, application links, published fee context, and public-hearing steps — one screen instead of six websites.</p>
+</section>
+
+<!-- 7 · Architecture -->
+<section class="slide">
+  <p class="kicker">Architecture</p>
+  <h2>Full-stack, <span class="grad">production-deployed.</span></h2>
+  <div class="cols">
+    <div class="cardx"><h3>🖥 Frontend</h3><p>Vue 3 + TypeScript + Vite · Pinia · Tailwind CSS · custom "Ocean State" design system · fully responsive with mobile nav</p></div>
+    <div class="cardx"><h3>⚙️ Backend</h3><p>Node.js + Express + TypeScript · 12 API modules · Zod validation · JWT + RBAC · audit logging · 25+ PostgreSQL tables</p></div>
+    <div class="cardx"><h3>🤖 AI layer</h3><p>Anthropic Claude behind a provider abstraction · keyword RAG over curated official sources · deterministic fallback when no key is set</p></div>
+    <div class="cardx"><h3>☁️ Deployment</h3><p>Google Cloud Run (scale-to-zero container serving API + SPA) · Cloud SQL PostgreSQL 14 · Cloud Build CI image builds</p></div>
+  </div>
+  <p class="sub" style="margin-top:1.4rem">Tested: 16 automated tests covering the applicability engine, stage-dependency enforcement, source-citation guardrails, RBAC, and completeness findings.</p>
+</section>
+
+<!-- 8 · Trust & guardrails -->
+<section class="slide light">
+  <p class="kicker">Trust by Design</p>
+  <h2>Guardrails are the <span class="grad">product.</span></h2>
+  <div class="cols">
+    <div class="cardx"><h3>📚 Verified source registry</h3><p>Every procedural fact traces to an official source with authority, URL, version, and last-verified date. Staff updates require a change note — full change history kept.</p></div>
+    <div class="cardx"><h3>🚫 Hard guarantees</h3><ul>
+      <li>Due dates rejected by the API unless a citing source is provided</li>
+      <li>Published processing estimates ≠ actual timelines, enforced in schema and UI</li>
+      <li>Decisions are only <i>recorded</i> as issued by authorities — never determined</li></ul></div>
+    <div class="cardx"><h3>⚖️ Honest completeness</h3><p>Every automated check carries the disclaimer: only the responsible authority can determine official completeness. Findings ship with evidence, not vibes.</p></div>
+  </div>
+</section>
+
+<!-- 9 · Roadmap -->
+<section class="slide">
+  <p class="kicker">Roadmap</p>
+  <h2>From Cumberland to <span class="grad">all of Rhode Island.</span></h2>
+  <div class="flow" style="flex-direction:column;align-items:flex-start;gap:.8rem">
+    <span class="step"><span class="n">✓</span>Phases 1–3 shipped: registration, pathways, checklists, documents, AI completeness, assistant, review coordination, reports</span>
+    <span class="step"><span class="n">4</span>Verified procedural coverage for all 39 municipalities + state agencies</span>
+    <span class="step"><span class="n">5</span>Source-freshness monitoring: auto-diff official pages, flag for human re-verification</span>
+    <span class="step"><span class="n">6</span>Cloud Storage uploads, email notifications, municipal reviewer portal</span>
+    <span class="step"><span class="n">7</span>Fine-grained permissions per role (reviewer read-only, contractor documents-only)</span>
+  </div>
+</section>
+
+<!-- 10 · Close -->
+<section class="slide">
+  <div class="logo"><span class="mark">🏠</span>RIHousing<span style="color:var(--brand-300)">AI</span></div>
+  <h1>Less friction.<br><span class="grad">More housing.</span></h1>
+  <p class="sub">
+    Live app: <a href="https://rihousingai-848331741999.us-east1.run.app">rihousingai-848331741999.us-east1.run.app</a><br>
+    Source: <a href="https://github.com/willypelz/RIHousingAI">github.com/willypelz/RIHousingAI</a>
+  </p>
+  <p class="sub" style="font-size:.85rem;opacity:.7">RIHousingAI provides administrative navigation assistance only — not zoning analysis or approval decisions.</p>
+</section>
+
+<div class="nav">
+  <button onclick="go(-1)" aria-label="Previous">←</button>
+  <span id="count"></span>
+  <button onclick="go(1)" aria-label="Next">→</button>
+</div>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];let i=0;
+function show(){slides.forEach((s,j)=>s.classList.toggle('active',j===i));document.getElementById('count').textContent=(i+1)+' / '+slides.length}
+function go(d){i=Math.min(slides.length-1,Math.max(0,i+d));show()}
+addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown')go(1);if(e.key==='ArrowLeft'||e.key==='PageUp')go(-1)});
+addEventListener('click',e=>{if(!e.target.closest('.nav')&&!e.target.closest('a'))go(1)});
+show();
+</script>
+</body>
+</html>
