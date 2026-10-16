@@ -3,6 +3,7 @@ import { useAuthStore } from './stores/auth';
 import { useRouter } from 'vue-router';
 import { ref, onMounted } from 'vue';
 import { api } from './api/client';
+import AssistantWidget from './components/AssistantWidget.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -80,6 +81,7 @@ onMounted(loadNotifs);
         <component :is="Component" class="animate-fade-up" />
       </router-view>
     </main>
+    <AssistantWidget v-if="auth.isAuthenticated && $route.path !== '/assistant'" />
     <footer v-if="auth.isAuthenticated" class="mx-auto max-w-6xl border-t border-slate-200 px-4 py-5 text-xs leading-relaxed text-slate-400">
       RIHousingAI provides administrative navigation assistance only. It does not perform zoning analysis or make approval decisions.
       Verify all requirements, fees, and deadlines with the responsible authorities.
