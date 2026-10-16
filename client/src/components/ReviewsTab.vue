@@ -82,7 +82,7 @@ onMounted(load);
       <div v-for="t in tasks" :key="t.id" class="flex items-center gap-2 border-b border-slate-100 py-2 text-sm last:border-0">
         <span class="badge" :class="t.waiting_on === 'agency' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800'">waiting on {{ t.waiting_on }}</span>
         <span :class="t.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-700'">{{ t.title }}</span>
-        <button v-if="t.status === 'open'" class="ml-auto text-xs text-blue-600 hover:underline" @click="setTask(t.id, 'done')">mark done</button>
+        <button v-if="t.status === 'open'" class="ml-auto text-xs text-brand-600 hover:underline" @click="setTask(t.id, 'done')">mark done</button>
       </div>
     </div>
 
@@ -115,12 +115,12 @@ onMounted(load);
           <span class="text-xs text-slate-500">{{ c.approval_name }}</span>
           <span v-if="c.agency_name" class="text-xs text-slate-400">from {{ c.agency_name }}</span>
           <span class="badge" :class="c.status === 'resolved' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'">{{ c.status }}</span>
-          <button v-if="c.status !== 'resolved'" class="ml-auto text-xs text-blue-600 hover:underline" @click="setCommentStatus(c.id, 'resolved')">resolve</button>
+          <button v-if="c.status !== 'resolved'" class="ml-auto text-xs text-brand-600 hover:underline" @click="setCommentStatus(c.id, 'resolved')">resolve</button>
         </div>
         <p class="mt-1 text-sm text-slate-700">{{ c.body }}</p>
         <div v-for="r in c.responses || []" :key="r.id" class="mt-2 rounded bg-slate-50 p-2 text-xs text-slate-600">
           <span class="badge bg-purple-100 text-purple-700">{{ r.is_draft ? 'DRAFT' : 'sent' }}</span>
-          <span v-if="r.ai_generated" class="badge ml-1 bg-blue-100 text-blue-700">AI-drafted — requires professional review before submission</span>
+          <span v-if="r.ai_generated" class="badge ml-1 bg-brand-100 text-brand-700">AI-drafted — requires professional review before submission</span>
           <p class="mt-1 whitespace-pre-wrap">{{ r.body }}</p>
         </div>
         <div v-if="c.status !== 'resolved'" class="mt-2 flex gap-2">
@@ -162,7 +162,7 @@ onMounted(load);
         <div v-for="cond in d.conditions || []" :key="cond.id" class="ml-4 mt-1 flex items-center gap-2 text-xs text-slate-600">
           <span class="badge" :class="cond.status === 'satisfied' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'">{{ cond.status }}</span>
           {{ cond.description }}
-          <button v-if="cond.status === 'open'" class="text-blue-600 hover:underline" @click="setCondition(cond.id, 'satisfied')">mark satisfied</button>
+          <button v-if="cond.status === 'open'" class="text-brand-600 hover:underline" @click="setCondition(cond.id, 'satisfied')">mark satisfied</button>
         </div>
       </div>
     </div>

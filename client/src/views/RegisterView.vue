@@ -24,7 +24,7 @@ async function submit() {
 </script>
 
 <template>
-  <div class="fixed inset-0 flex items-center justify-center overflow-y-auto bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-50 p-6">
+  <div class="fixed inset-0 flex items-center justify-center overflow-y-auto bg-gradient-to-br from-slate-50 via-brand-50/40 to-slate-50 p-6">
     <div class="w-full max-w-sm animate-fade-up">
     <h1 class="mb-1 text-center text-2xl font-bold text-slate-900">Create your account</h1>
     <p class="mb-6 text-center text-sm text-slate-500">Start navigating your approval process</p>
@@ -38,7 +38,7 @@ async function submit() {
       </div>
       <p v-if="error" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ error }}</p>
       <button class="btn w-full" :disabled="busy">{{ busy ? 'Creating account…' : 'Register' }}</button>
-      <p class="text-center text-sm text-slate-500">Have an account? <router-link to="/login" class="font-semibold text-indigo-600 hover:underline">Sign in</router-link></p>
+      <p class="text-center text-sm text-slate-500">Have an account? <router-link to="/login" class="font-semibold text-brand-600 hover:underline">Sign in</router-link></p>
     </form>
     </div>
   </div>

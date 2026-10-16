@@ -8,7 +8,7 @@ const busy = ref(false);
 const err = ref('');
 
 const SEVERITY: Record<string, string> = {
-  blocker: 'bg-red-100 text-red-800', warning: 'bg-amber-100 text-amber-800', info: 'bg-blue-100 text-blue-800',
+  blocker: 'bg-red-100 text-red-800', warning: 'bg-amber-100 text-amber-800', info: 'bg-brand-100 text-brand-800',
 };
 
 async function load() { checks.value = (await api.get(`/projects/${props.projectId}/completeness-checks`)).checks; }
@@ -52,7 +52,7 @@ onMounted(load);
           <span class="badge" :class="SEVERITY[f.severity]">{{ f.severity }}</span>
           <span class="badge bg-slate-100 text-slate-600">{{ f.finding_type.replace(/_/g, ' ') }}</span>
           <p class="text-sm font-medium text-slate-700">{{ f.title }}</p>
-          <button class="ml-auto text-xs text-blue-600 hover:underline" @click="resolve(f)">{{ f.resolved ? 'unresolve' : 'mark resolved' }}</button>
+          <button class="ml-auto text-xs text-brand-600 hover:underline" @click="resolve(f)">{{ f.resolved ? 'unresolve' : 'mark resolved' }}</button>
         </div>
         <p class="mt-1 text-xs text-slate-600">{{ f.detail }}</p>
         <p v-if="f.evidence" class="mt-1 rounded bg-slate-50 p-2 text-xs italic text-slate-500">Evidence: {{ f.evidence }}</p>

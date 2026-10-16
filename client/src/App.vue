@@ -31,18 +31,18 @@ onMounted(loadNotifs);
 
 <template>
   <div class="min-h-screen">
-    <nav v-if="auth.isAuthenticated" class="sticky top-0 z-30 border-b border-indigo-950/30 bg-gradient-to-r from-indigo-950 via-blue-900 to-indigo-900 shadow-lg backdrop-blur">
+    <nav v-if="auth.isAuthenticated" class="sticky top-0 z-30 border-b border-brand-950/30 bg-gradient-to-r from-brand-950 via-brand-900 to-slate-900 shadow-lg backdrop-blur">
       <div class="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2.5">
         <router-link to="/" class="mr-4 flex items-center gap-2 text-lg font-extrabold tracking-tight text-white">
-          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-400 to-blue-500 text-sm shadow-soft">🏠</span>
-          RIHousing<span class="text-indigo-300">AI</span>
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-400 to-cyan-500 text-sm shadow-soft">🏠</span>
+          RIHousing<span class="text-brand-300">AI</span>
         </router-link>
         <router-link to="/" class="nav-link" :class="{ 'router-link-active': $route.path === '/' || $route.path.startsWith('/projects') }">Projects</router-link>
         <router-link to="/sources" class="nav-link">Official Sources</router-link>
         <router-link to="/assistant" class="nav-link">AI Assistant</router-link>
         <div class="ml-auto flex items-center gap-3">
           <div class="relative">
-            <button @click="toggleNotifs" class="relative rounded-lg p-1.5 text-indigo-100 transition-colors hover:bg-white/10 hover:text-white" aria-label="Notifications">
+            <button @click="toggleNotifs" class="relative rounded-lg p-1.5 text-brand-100 transition-colors hover:bg-white/10 hover:text-white" aria-label="Notifications">
               🔔<span v-if="unread" class="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow">{{ unread }}</span>
             </button>
             <div v-if="showNotifs" class="absolute right-0 z-20 mt-2 w-80 animate-fade-up rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-lift">
@@ -55,9 +55,9 @@ onMounted(loadNotifs);
             </div>
           </div>
           <div class="flex items-center gap-2 rounded-full bg-white/10 py-1 pl-1 pr-3">
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-blue-500 text-[11px] font-bold text-white">{{ auth.user?.name?.charAt(0)?.toUpperCase() }}</span>
-            <span class="hidden text-xs font-medium text-indigo-100 sm:block">{{ auth.user?.name }}</span>
-            <span class="hidden text-[10px] text-indigo-300 md:block">· {{ auth.user?.role?.replace('_', ' ') }}</span>
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-cyan-500 text-[11px] font-bold text-white">{{ auth.user?.name?.charAt(0)?.toUpperCase() }}</span>
+            <span class="hidden text-xs font-medium text-brand-100 sm:block">{{ auth.user?.name }}</span>
+            <span class="hidden text-[10px] text-brand-300 md:block">· {{ auth.user?.role?.replace('_', ' ') }}</span>
           </div>
           <button @click="logout" class="nav-link">Sign out</button>
         </div>

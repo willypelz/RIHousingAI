@@ -3,6 +3,22 @@ export default {
   content: ['./index.html', './src/**/*.{vue,ts}'],
   theme: {
     extend: {
+      colors: {
+        // "Ocean State" brand palette — deep teal-blue
+        brand: {
+          50: '#effbfa',
+          100: '#d5f3f2',
+          200: '#afe6e7',
+          300: '#79d1d6',
+          400: '#3eb3bd',
+          500: '#2396a3',
+          600: '#1e7a8a',
+          700: '#1e6271',
+          800: '#20515d',
+          900: '#1f444f',
+          950: '#0d2b35',
+        },
+      },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
       },

@@ -68,20 +68,20 @@ function newConversation() { conversationId.value = null; messages.value = []; l
         <p class="mb-4 mt-2 max-w-sm">Ask about the approval process for your project. Answers are grounded in official sources with citations.</p>
         <div class="flex max-w-md flex-wrap justify-center gap-2">
           <button v-for="s in SUGGESTIONS" :key="s"
-            class="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 transition-all hover:border-indigo-300 hover:bg-indigo-100"
+            class="rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700 transition-all hover:border-brand-300 hover:bg-brand-100"
             @click="send(s)">{{ s }}</button>
         </div>
       </div>
       <div v-for="(m, i) in messages" :key="i" class="flex animate-fade-up items-end gap-2" :class="m.role === 'user' ? 'flex-row-reverse' : ''">
         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-soft"
-          :class="m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-gradient-to-br from-indigo-400 to-blue-500 text-white'">
+          :class="m.role === 'user' ? 'bg-brand-600 text-white' : 'bg-gradient-to-br from-brand-400 to-cyan-500 text-white'">
           {{ m.role === 'user' ? '🙂' : '🤖' }}
         </span>
         <div class="max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-left text-sm shadow-soft"
-          :class="m.role === 'user' ? 'rounded-br-md bg-gradient-to-b from-indigo-600 to-indigo-700 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-800'">{{ m.content }}</div>
+          :class="m.role === 'user' ? 'rounded-br-md bg-gradient-to-b from-brand-600 to-brand-700 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-800'">{{ m.content }}</div>
       </div>
       <div v-if="busy" class="flex items-end gap-2">
-        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-blue-500 text-xs shadow-soft">🤖</span>
+        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-cyan-500 text-xs shadow-soft">🤖</span>
         <div class="flex gap-1 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-3 shadow-soft">
           <span class="h-1.5 w-1.5 animate-typing rounded-full bg-slate-400"></span>
           <span class="h-1.5 w-1.5 animate-typing rounded-full bg-slate-400" style="animation-delay: 0.15s"></span>
@@ -90,7 +90,7 @@ function newConversation() { conversationId.value = null; messages.value = []; l
       </div>
     </div>
 
-    <div v-if="lastSources.length" class="mb-3 rounded-md bg-blue-50 p-2 text-xs text-blue-800">
+    <div v-if="lastSources.length" class="mb-3 rounded-md bg-brand-50 p-2 text-xs text-brand-800">
       <strong>Sources consulted:</strong>
       <span v-for="s in lastSources" :key="s.id">
         · <a :href="s.url" target="_blank" class="underline">{{ s.title }}</a> (verified {{ s.last_verified_at?.slice(0, 10) }}) </span>

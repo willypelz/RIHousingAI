@@ -6,14 +6,14 @@
   html { @apply antialiased; }
   body { @apply bg-slate-50 font-sans text-slate-800; }
   h1, h2, h3 { @apply tracking-tight; }
-  ::selection { @apply bg-indigo-100 text-indigo-900; }
+  ::selection { @apply bg-brand-100 text-brand-900; }
 }
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-b from-indigo-600 to-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-soft transition-all duration-150
-      hover:from-indigo-500 hover:to-indigo-600 hover:shadow-lift active:translate-y-px
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-b from-brand-600 to-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-soft transition-all duration-150
+      hover:from-brand-500 hover:to-brand-600 hover:shadow-lift active:translate-y-px
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2
       disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none;
   }
   .btn-secondary {
@@ -24,21 +24,21 @@
   }
   .input {
     @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm transition-all duration-150 placeholder:text-slate-400
-      hover:border-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25;
+      hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25;
   }
   .label { @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500; }
   .card {
     @apply rounded-xl border border-slate-200/80 bg-white p-5 shadow-soft transition-shadow duration-200;
   }
-  .card-hover { @apply hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lift transition-all duration-200; }
+  .card-hover { @apply hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift transition-all duration-200; }
   .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold; }
   .badge-dot { @apply inline-block h-1.5 w-1.5 rounded-full bg-current opacity-70; }
   .skeleton { @apply animate-pulse rounded-lg bg-slate-200/70; }
   .section-title { @apply text-sm font-bold uppercase tracking-wider text-slate-400; }
   .nav-link {
-    @apply rounded-lg px-3 py-1.5 text-sm font-medium text-indigo-100 transition-colors hover:bg-white/10 hover:text-white;
+    @apply rounded-lg px-3 py-1.5 text-sm font-medium text-brand-100 transition-colors hover:bg-white/10 hover:text-white;
   }
   .nav-link.router-link-active { @apply bg-white/15 text-white; }
   .progress-track { @apply h-1.5 w-full overflow-hidden rounded-full bg-slate-100; }
-  .progress-fill { @apply h-full rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 transition-all duration-500; }
+  .progress-fill { @apply h-full rounded-full bg-gradient-to-r from-brand-500 to-cyan-500 transition-all duration-500; }
 }

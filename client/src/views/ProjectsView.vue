@@ -32,8 +32,8 @@ onMounted(async () => {
     <div class="grid gap-4 sm:grid-cols-2">
       <router-link v-for="p in projects" :key="p.id" :to="`/projects/${p.id}`" class="card card-hover group">
         <div class="flex items-start justify-between gap-2">
-          <h2 class="font-bold text-slate-900 transition-colors group-hover:text-indigo-700">{{ p.name }}</h2>
-          <span class="badge bg-indigo-50 text-indigo-700"><span class="badge-dot"></span>{{ p.status.replace(/_/g, ' ') }}</span>
+          <h2 class="font-bold text-slate-900 transition-colors group-hover:text-brand-700">{{ p.name }}</h2>
+          <span class="badge bg-brand-50 text-brand-700"><span class="badge-dot"></span>{{ p.status.replace(/_/g, ' ') }}</span>
         </div>
         <p class="mt-1 text-sm text-slate-500">📍 {{ p.address }}, {{ p.municipality_name }}, RI</p>
         <div class="mt-4 flex flex-wrap gap-2 text-[11px] font-medium">

@@ -74,14 +74,14 @@ onMounted(load);
         <div class="flex flex-wrap items-center gap-2">
           <p class="text-sm font-medium text-slate-700">{{ d.title }}</p>
           <span class="badge bg-slate-100 text-slate-600">{{ d.category.replace(/_/g, ' ') }}</span>
-          <span v-if="d.checklist_item_title" class="badge bg-blue-50 text-blue-700">→ {{ d.checklist_item_title }}</span>
+          <span v-if="d.checklist_item_title" class="badge bg-brand-50 text-brand-700">→ {{ d.checklist_item_title }}</span>
         </div>
         <div v-for="v in d.versions" :key="v.id" class="mt-1 flex items-center gap-3 text-xs text-slate-500">
           <span class="font-mono">v{{ v.version }}</span>
           <span>{{ v.original_name }}</span>
           <span>{{ (v.size_bytes / 1024).toFixed(0) }} KB</span>
           <span>{{ new Date(v.uploaded_at).toLocaleDateString() }} by {{ v.uploaded_by }}</span>
-          <button class="text-blue-600 hover:underline" @click="download(v)">download</button>
+          <button class="text-brand-600 hover:underline" @click="download(v)">download</button>
         </div>
       </div>
     </div>

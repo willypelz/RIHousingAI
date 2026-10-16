@@ -9,7 +9,7 @@ const err = ref('');
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-slate-100 text-slate-600',
-  active: 'bg-blue-100 text-blue-800',
+  active: 'bg-brand-100 text-brand-800',
   waiting_on_agency: 'bg-amber-100 text-amber-800',
   waiting_on_applicant: 'bg-purple-100 text-purple-800',
   complete: 'bg-green-100 text-green-800',
@@ -82,11 +82,11 @@ onMounted(load);
       <p class="text-xs text-slate-500">
         {{ a.agency_name }}<span v-if="a.agency_department"> — {{ a.agency_department }}</span>
         <span v-if="a.agency_phone"> · {{ a.agency_phone }}</span>
-        <a v-if="a.agency_website" :href="a.agency_website" target="_blank" class="text-blue-600 hover:underline"> · agency site ↗</a>
+        <a v-if="a.agency_website" :href="a.agency_website" target="_blank" class="text-brand-600 hover:underline"> · agency site ↗</a>
       </p>
       <p v-if="a.applicability_note" class="mt-1 text-xs italic text-amber-700">{{ a.applicability_note }}</p>
       <p v-if="a.source_url" class="mt-1 text-xs text-slate-400">
-        Source: <a :href="a.source_url" target="_blank" class="text-blue-600 hover:underline">{{ a.source_title }}</a>
+        Source: <a :href="a.source_url" target="_blank" class="text-brand-600 hover:underline">{{ a.source_title }}</a>
         (verified {{ a.source_verified?.slice(0, 10) }})
       </p>
       <p v-if="a.processing_estimate" class="mt-1 text-xs text-slate-500">📋 Published estimate: {{ a.processing_estimate }}</p>
@@ -94,7 +94,7 @@ onMounted(load);
       <div class="mt-4 flex flex-wrap gap-2.5">
         <div v-for="s in stagesFor(a.id)" :key="s.id"
           class="w-56 rounded-xl border p-3 transition-all duration-150 hover:shadow-soft"
-          :class="s.status === 'active' ? 'border-indigo-300 bg-indigo-50/40 ring-1 ring-indigo-200' : s.status === 'complete' ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white'">
+          :class="s.status === 'active' ? 'border-brand-300 bg-brand-50/40 ring-1 ring-brand-200' : s.status === 'complete' ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-white'">
           <div class="flex items-start justify-between gap-1">
             <p class="text-xs font-semibold text-slate-700">{{ s.name }}</p>
             <span class="badge shrink-0" :class="STATUS_COLORS[s.status]">{{ s.status.replace(/_/g, ' ') }}</span>
@@ -102,7 +102,7 @@ onMounted(load);
           <p class="mt-1 text-[11px] text-slate-400">{{ s.responsible_authority }}</p>
           <p v-if="s.submitted_at" class="text-[11px] text-slate-400">Submitted {{ s.submitted_at.slice(0, 10) }}</p>
           <p v-if="s.verified_due_date" class="text-[11px] text-red-500">Due {{ s.verified_due_date.slice(0, 10) }} (verified)</p>
-          <p v-if="s.next_action" class="mt-1 text-[11px] italic text-blue-700">→ {{ s.next_action }}</p>
+          <p v-if="s.next_action" class="mt-1 text-[11px] italic text-brand-700">→ {{ s.next_action }}</p>
           <p v-if="depNames(s.id).length" class="mt-1 text-[11px] text-slate-400">Depends on: {{ depNames(s.id).join('; ') }}</p>
           <select class="mt-2 w-full rounded border border-slate-200 p-1 text-[11px]" :value="s.status"
             @change="setStatus(s, ($event.target as HTMLSelectElement).value)">

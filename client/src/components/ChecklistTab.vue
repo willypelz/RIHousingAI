@@ -26,7 +26,7 @@ onMounted(load);
 
 <template>
   <div class="space-y-5">
-    <div class="rounded-md bg-blue-50 p-3 text-xs text-blue-800">
+    <div class="rounded-md bg-brand-50 p-3 text-xs text-brand-800">
       Each item cites its official source. Fee amounts are never estimated by this platform — confirm current fees with the cited authority before submitting.
     </div>
     <div v-for="(group, approval) in grouped" :key="approval" class="card">
@@ -46,8 +46,8 @@ onMounted(load);
           <p class="text-xs text-slate-500">{{ item.description }}</p>
           <p class="mt-0.5 text-[11px] text-slate-400">
             Responsible: {{ item.responsible_authority }}
-            <template v-if="item.source_url"> · <a :href="item.source_url" target="_blank" class="text-blue-600 hover:underline">source ↗</a> (verified {{ item.source_verified?.slice(0, 10) }})</template>
-            <template v-if="item.submission_link"> · <a :href="item.submission_link" target="_blank" class="text-blue-600 hover:underline">submit ↗</a></template>
+            <template v-if="item.source_url"> · <a :href="item.source_url" target="_blank" class="text-brand-600 hover:underline">source ↗</a> (verified {{ item.source_verified?.slice(0, 10) }})</template>
+            <template v-if="item.submission_link"> · <a :href="item.submission_link" target="_blank" class="text-brand-600 hover:underline">submit ↗</a></template>
           </p>
           <p v-if="item.item_type === 'fee' && item.fee_note" class="text-[11px] text-amber-700">💲 {{ item.fee_note }}</p>
         </div>

@@ -30,7 +30,7 @@ onMounted(async () => {
           <p class="mt-1 text-xs text-slate-500">
             <span v-if="a.phone">📞 {{ a.phone }} · </span>
             <span v-if="a.address">{{ a.address }} · </span>
-            <a v-if="a.website" :href="a.website" target="_blank" class="text-blue-600 hover:underline">website ↗</a>
+            <a v-if="a.website" :href="a.website" target="_blank" class="text-brand-600 hover:underline">website ↗</a>
           </p>
         </div>
       </div>
@@ -44,7 +44,7 @@ onMounted(async () => {
       <p class="text-xs text-slate-500">{{ s.authority }}</p>
       <p class="mt-1 text-sm text-slate-600">{{ s.summary }}</p>
       <p class="mt-2 text-xs text-slate-400">
-        <a :href="s.url" target="_blank" class="text-blue-600 hover:underline">{{ s.url }} ↗</a>
+        <a :href="s.url" target="_blank" class="text-brand-600 hover:underline">{{ s.url }} ↗</a>
         · Version: {{ s.doc_version || 'n/a' }}
         · Last verified: {{ s.last_verified_at?.slice(0, 10) || 'unverified' }}
       </p>
