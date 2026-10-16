@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+server/uploads/*
+!server/uploads/.gitkeep
+server/.env
+.git
+.idea

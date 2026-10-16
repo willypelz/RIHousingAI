@@ -1,6 +1,9 @@
 import express from 'express';
 import 'express-async-errors';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { authRouter } from './modules/auth.js';
 import { projectsRouter, municipalitiesRouter } from './modules/projects.js';
 import { pathwaysRouter } from './modules/pathways.js';
@@ -32,6 +35,13 @@ export function createApp() {
   app.use('/api/sources', sourcesRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/assistant', assistantRouter);
+
+  // Serve built frontend in production (single Cloud Run service)
+  const clientDist = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'client', 'dist');
+  if (fs.existsSync(clientDist)) {
+    app.use(express.static(clientDist));
+    app.get(/^(?!\/api).*/, (_req, res) => res.sendFile(path.join(clientDist, 'index.html')));
+  }
 
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error(err);
