@@ -36,6 +36,12 @@ export function createApp() {
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/assistant', assistantRouter);
 
+  // Project presentation deck
+  const docsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'docs');
+  if (fs.existsSync(path.join(docsDir, 'presentation.html'))) {
+    app.get(['/presentation', '/presentation.html'], (_req, res) => res.sendFile(path.join(docsDir, 'presentation.html')));
+  }
+
   // Serve built frontend in production (single Cloud Run service)
   const clientDist = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'client', 'dist');
   if (fs.existsSync(clientDist)) {

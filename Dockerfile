@@ -14,5 +14,6 @@ COPY server/package*.json ./
 RUN npm ci --no-audit --no-fund
 COPY server/ ./
 COPY --from=client-build /app/client/dist /app/client/dist
+COPY docs/ /app/docs/
 EXPOSE 8080
 CMD ["npx", "tsx", "src/index.ts"]
