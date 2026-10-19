@@ -9,9 +9,10 @@ RUN npm run build
 # ---- Server ----
 FROM node:20-slim
 WORKDIR /app/server
-ENV NODE_ENV=production
 COPY server/package*.json ./
-RUN npm ci --no-audit --no-fund
+# include dev deps: tsx is required to run the TS server at runtime
+RUN npm ci --include=dev --no-audit --no-fund
+ENV NODE_ENV=production
 COPY server/ ./
 COPY --from=client-build /app/client/dist /app/client/dist
 COPY docs/ /app/docs/
