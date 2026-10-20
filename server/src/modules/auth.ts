@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { query } from '../db/pool.js';
+import { insert, where, now } from '../db/firestore.js';
 import { signToken, requireAuth } from '../middleware/auth.js';
 import { audit } from '../middleware/audit.js';
 
@@ -23,14 +23,11 @@ authRouter.post('/register', async (req, res) => {
   let role = parsed.data.role;
   // municipal_staff and admin accounts must be provisioned by an admin
   if (role === 'municipal_staff' || role === 'admin') role = 'developer';
-  const existing = await query(`SELECT 1 FROM users WHERE email=$1`, [email]);
-  if (existing.rows.length) return res.status(409).json({ error: 'Email already registered' });
-  const hash = await bcrypt.hash(password, 10);
-  const { rows } = await query(
-    `INSERT INTO users (email, password_hash, name, role) VALUES ($1,$2,$3,$4) RETURNING id, email, name, role`,
-    [email, hash, name, role]
-  );
-  const user = rows[0];
+  const existing = await where('users', 'email', email);
+  if (existing.length) return res.status(409).json({ error: 'Email already registered' });
+  const password_hash = await bcrypt.hash(password, 10);
+  const doc = await insert('users', { email, password_hash, name, role, created_at: now() });
+  const user = { id: doc.id, email, name, role };
   await audit(user.id, 'user.register', 'user', user.id);
   res.status(201).json({ token: signToken(user), user });
 });
@@ -38,7 +35,7 @@ authRouter.post('/register', async (req, res) => {
 authRouter.post('/login', async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-  const { rows } = await query(`SELECT id, email, name, role, password_hash FROM users WHERE email=$1`, [email]);
+  const rows = await where('users', 'email', email);
   if (!rows.length || !(await bcrypt.compare(password, rows[0].password_hash))) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
