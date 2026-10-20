@@ -92,9 +92,9 @@ onMounted(load);
 
     <!-- View switcher -->
     <div class="flex items-center justify-between gap-2">
-      <div class="inline-flex gap-1 rounded-xl bg-slate-200/50 p-1 ring-1 ring-slate-900/[0.04]" role="tablist" aria-label="Workflow view">
+      <div class="inline-flex gap-0.5 rounded-lg bg-slate-100 p-0.5" role="tablist" aria-label="Workflow view">
         <button v-for="v in (['board','timeline','calendar'] as const)" :key="v" role="tab"
-          :aria-selected="view === v" class="tab-btn !px-3 !py-1 capitalize" @click="view = v">{{ v }}</button>
+          :aria-selected="view === v" class="seg-btn" @click="view = v">{{ v }}</button>
       </div>
       <p class="hint hidden sm:block">Only recorded and verified dates appear — nothing is estimated.</p>
     </div>

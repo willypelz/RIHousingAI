@@ -53,40 +53,39 @@ function downloadReport() {
 
 <template>
   <div v-if="project">
-    <div class="card mb-6 !p-0">
-      <div class="flex flex-wrap items-start justify-between gap-3 p-6">
-        <div class="flex items-start gap-4">
-          <span class="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-700 text-white shadow-soft sm:flex"><AppIcon name="building" :size="22" /></span>
-          <div>
-            <h1 class="page-title">{{ project.name }}</h1>
-            <p class="mt-1 flex items-center gap-1 text-[15px] text-slate-500"><AppIcon name="map-pin" :size="15" /> {{ project.address }}, {{ project.municipality_name }}, RI</p>
-            <div class="mt-3.5 flex flex-wrap gap-1.5 text-xs font-medium">
-              <span class="rounded-lg bg-brand-50 px-2.5 py-1 text-brand-700">{{ project.units }} units</span>
-              <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600">{{ project.dev_type.replace(/_/g, ' ') }}</span>
-              <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600">{{ project.construction_kind.replace(/_/g, ' ') }}</span>
-              <span class="rounded-lg bg-cyan-50 px-2.5 py-1 text-cyan-700">{{ project.status.replace(/_/g, ' ') }}</span>
-            </div>
-            <p v-if="project.sewer_service === 'unknown' || project.water_service === 'unknown'" class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-              Utility service ({{ [project.sewer_service === 'unknown' ? 'sewer' : '', project.water_service === 'unknown' ? 'water' : ''].filter(Boolean).join(', ') }})
-              is unconfirmed — some approvals are marked conditional until confirmed with the Town.
-            </p>
-          </div>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <label class="sr-only" for="report-lang">Report language</label>
-          <select id="report-lang" v-model="reportLanguage" class="input !w-auto !py-2 text-xs">
-            <option v-for="l in REPORT_LANGUAGES" :key="l.code" :value="l.code">{{ l.name }}</option>
-          </select>
-          <button class="btn-secondary" @click="downloadReport"><AppIcon name="download" :size="15" /> Status report</button>
-        </div>
+    <nav class="mb-3 text-xs font-medium text-slate-400" aria-label="Breadcrumb">
+      <router-link to="/" class="rounded-sm hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">Projects</router-link>
+      <span class="mx-1.5">/</span><span class="text-slate-600">{{ project.name }}</span>
+    </nav>
+    <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 class="page-title">{{ project.name }}</h1>
+        <p class="mt-1 text-sm text-slate-500">
+          {{ project.address }}, {{ project.municipality_name }}, RI
+          <span class="mx-1.5 text-slate-300">·</span>{{ project.units }} units
+          <span class="mx-1.5 text-slate-300">·</span>{{ project.dev_type.replace(/_/g, ' ') }}
+          <span class="mx-1.5 text-slate-300">·</span>{{ project.construction_kind.replace(/_/g, ' ') }}
+          <span class="badge ml-2 bg-brand-50 align-middle text-brand-800">{{ project.status.replace(/_/g, ' ') }}</span>
+        </p>
+        <p v-if="project.sewer_service === 'unknown' || project.water_service === 'unknown'" class="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">
+          <AppIcon name="info" :size="13" />
+          Utilities ({{ [project.sewer_service === 'unknown' ? 'sewer' : '', project.water_service === 'unknown' ? 'water' : ''].filter(Boolean).join(', ') }}) unconfirmed — some approvals are conditional.
+        </p>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <label class="sr-only" for="report-lang">Report language</label>
+        <select id="report-lang" v-model="reportLanguage" class="input !w-auto !py-1.5 text-xs">
+          <option v-for="l in REPORT_LANGUAGES" :key="l.code" :value="l.code">{{ l.name }}</option>
+        </select>
+        <button class="btn-secondary !py-1.5" @click="downloadReport"><AppIcon name="download" :size="14" /> Report</button>
       </div>
     </div>
 
-    <div class="mb-6 flex gap-1 overflow-x-auto rounded-2xl bg-slate-200/50 p-1.5 ring-1 ring-slate-900/[0.04]" role="tablist" aria-label="Project sections">
+    <div class="mb-6 flex gap-5 overflow-x-auto border-b border-slate-200" role="tablist" aria-label="Project sections">
       <button v-for="t in tabs" :key="t.id" @click="tab = t.id"
-        role="tab" :aria-selected="tab === t.id" class="tab-btn relative">
+        role="tab" :aria-selected="tab === t.id" class="tab-btn">
         {{ t.label }}
-        <span v-if="t.badge" class="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{{ t.badge }}</span>
+        <span v-if="t.badge" class="ml-1.5 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{{ t.badge }}</span>
       </button>
     </div>
 

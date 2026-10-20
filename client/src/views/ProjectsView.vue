@@ -30,23 +30,20 @@ onMounted(async () => {
       <p class="mx-auto mt-1 max-w-sm text-sm text-slate-500">Register your development project and we'll build its approval pathway from official sources.</p>
       <router-link to="/projects/new" class="btn mt-5">Register your first project</router-link>
     </div>
-    <div class="grid gap-4 sm:grid-cols-2">
-      <router-link v-for="p in projects" :key="p.id" :to="`/projects/${p.id}`" class="card card-hover group">
-        <div class="flex items-start gap-3.5">
-          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-600 group-hover:text-white"><AppIcon name="building" :size="20" /></span>
-          <div class="min-w-0 flex-1">
-            <div class="flex items-start justify-between gap-2">
-              <h2 class="text-[1.05rem] font-bold text-slate-900 transition-colors group-hover:text-brand-700">{{ p.name }}</h2>
-              <span class="badge shrink-0 bg-brand-50 text-brand-700"><span class="badge-dot"></span>{{ p.status.replace(/_/g, ' ') }}</span>
-            </div>
-            <p class="mt-1 flex items-center gap-1 text-sm text-slate-500"><AppIcon name="map-pin" :size="14" /> {{ p.address }}, {{ p.municipality_name }}, RI</p>
-            <div class="mt-3.5 flex flex-wrap gap-1.5 text-xs font-medium">
-              <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600">{{ p.units }} units</span>
-              <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600">{{ p.dev_type.replace(/_/g, ' ') }}</span>
-              <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600">{{ p.construction_kind.replace(/_/g, ' ') }}</span>
-            </div>
-          </div>
+    <div v-if="projects.length" class="card divide-y divide-slate-100 !p-0">
+      <router-link v-for="p in projects" :key="p.id" :to="`/projects/${p.id}`"
+        class="group flex items-center gap-4 px-5 py-4 transition-colors first:rounded-t-xl last:rounded-b-xl hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700"><AppIcon name="building" :size="18" /></span>
+        <div class="min-w-0 flex-1">
+          <p class="truncate font-semibold text-slate-900 group-hover:text-brand-800">{{ p.name }}</p>
+          <p class="mt-0.5 truncate text-sm text-slate-500">{{ p.address }}, {{ p.municipality_name }}, RI</p>
         </div>
+        <div class="hidden items-center gap-1.5 text-xs font-medium text-slate-500 sm:flex">
+          <span class="rounded-md bg-slate-100 px-2 py-1">{{ p.units }} units</span>
+          <span class="rounded-md bg-slate-100 px-2 py-1">{{ p.dev_type.replace(/_/g, ' ') }}</span>
+        </div>
+        <span class="badge hidden bg-brand-50 text-brand-800 md:inline-flex">{{ p.status.replace(/_/g, ' ') }}</span>
+        <AppIcon name="arrow-right" :size="15" class="shrink-0 text-slate-300 transition-colors group-hover:text-brand-600" />
       </router-link>
     </div>
   </div>
