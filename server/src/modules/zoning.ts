@@ -40,6 +40,8 @@ zoningRouter.get('/:projectId/zoning', requireProjectAccess(), async (req, res) 
     map_tools: MAP_TOOLS,
     district: saved.district ?? null,
     district_confirmed_from: saved.district_confirmed_from ?? null,
+    sewer_service: project.sewer_service,
+    water_service: project.water_service,
     checks: DIMENSIONAL_CHECKS.map(c => ({
       ...c,
       value: saved.checks?.[c.key] ?? null,
@@ -50,12 +52,14 @@ zoningRouter.get('/:projectId/zoning', requireProjectAccess(), async (req, res) 
   });
 });
 
-/** Save user-confirmed district and dimensional values (recorded, never computed). */
+/** Save user-confirmed district, dimensional values, and utility confirmations
+ *  (recorded, never computed). Confirming utilities regenerates the approval pathway
+ *  so sewer/water approvals reflect the zoning analysis findings. */
 zoningRouter.patch('/:projectId/zoning', requireProjectAccess(), async (req, res) => {
   const projectId = Number(req.params.projectId);
   const project = await getById('projects', projectId);
   if (!project) return res.status(404).json({ error: 'Project not found' });
-  const { district, district_confirmed_from, checks } = req.body || {};
+  const { district, district_confirmed_from, checks, sewer_service, water_service } = req.body || {};
   const zoning = { ...(project.zoning || {}) };
   if (district !== undefined) zoning.district = district || null;
   if (district_confirmed_from !== undefined) zoning.district_confirmed_from = district_confirmed_from || null;
@@ -66,9 +70,31 @@ zoningRouter.patch('/:projectId/zoning', requireProjectAccess(), async (req, res
     }
   }
   zoning.updated_at = now();
-  await updateById('projects', projectId, { zoning });
-  await audit(req.user!.id, 'zoning.update', 'project', projectId, { district: zoning.district });
-  res.json({ zoning });
+
+  const projectUpdates: Record<string, any> = { zoning };
+  let utilitiesChanged = false;
+  if (sewer_service && ['public_sewer','septic','unknown'].includes(sewer_service) && sewer_service !== project.sewer_service) {
+    projectUpdates.sewer_service = sewer_service; utilitiesChanged = true;
+  }
+  if (water_service && ['public_water','well','unknown'].includes(water_service) && water_service !== project.water_service) {
+    projectUpdates.water_service = water_service; utilitiesChanged = true;
+  }
+  await updateById('projects', projectId, projectUpdates);
+
+  // Utilities drive sewer/water/OWTS applicability — rebuild the pathway from new facts
+  let pathway_regenerated = false;
+  if (utilitiesChanged) {
+    const { buildPathway } = await import('./pathways.js');
+    const { deleteWhere } = await import('../db/firestore.js');
+    for (const c of ['project_approvals', 'review_stages', 'checklist_items']) {
+      await deleteWhere(c, 'project_id', projectId);
+    }
+    await buildPathway({ ...project, ...projectUpdates, id: projectId });
+    pathway_regenerated = true;
+  }
+
+  await audit(req.user!.id, 'zoning.update', 'project', projectId, { district: zoning.district, utilitiesChanged });
+  res.json({ zoning, sewer_service: projectUpdates.sewer_service ?? project.sewer_service, water_service: projectUpdates.water_service ?? project.water_service, pathway_regenerated });
 });
 
 function languageName(code: string): string | null {
