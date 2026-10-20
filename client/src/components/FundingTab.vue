@@ -105,7 +105,7 @@ onMounted(load);
     </p>
 
     <!-- Gap calculator -->
-    <div class="card !ring-brand-500/25">
+    <div class="card !border-brand-300">
       <h2 class="mb-1 text-[1.05rem] font-bold text-slate-900">Funding gap calculator</h2>
       <p class="mb-4 text-xs text-slate-500">Your own planning figures — select programs below and enter the amounts you plan to request.</p>
       <div class="grid gap-4 sm:grid-cols-3">
@@ -113,11 +113,11 @@ onMounted(load);
           <label class="label" for="f-total">Total project cost</label>
           <input id="f-total" v-model.number="totalCost" type="number" min="0" class="input" placeholder="e.g. 5000000" />
         </div>
-        <div class="stat-card !p-4 !shadow-none !ring-slate-200">
+        <div class="stat-card !p-4 !shadow-none !border-slate-200">
           <span class="stat-icon bg-brand-50 text-brand-600"><AppIcon name="currency" :size="20" /></span>
           <div><p class="stat-value text-lg">{{ fmt(committed) }}</p><p class="stat-label">Selected sources</p></div>
         </div>
-        <div class="stat-card !p-4 !shadow-none" :class="gap > 0 ? '!ring-amber-300 !bg-amber-50/50' : '!ring-emerald-300 !bg-emerald-50/50'">
+        <div class="stat-card !p-4 !shadow-none" :class="gap > 0 ? '!border-amber-300 !bg-amber-50/50' : '!border-emerald-300 !bg-emerald-50/50'">
           <span class="stat-icon" :class="gap > 0 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'"><AppIcon :name="gap > 0 ? 'info' : 'check'" :size="20" /></span>
           <div><p class="stat-value text-lg" :class="gap > 0 ? 'text-amber-700' : 'text-emerald-700'">{{ fmt(Math.abs(gap)) }}</p>
             <p class="stat-label">{{ gap > 0 ? 'Remaining gap' : gap < 0 ? 'Over-committed' : 'Fully stacked' }}</p></div>
@@ -139,7 +139,7 @@ onMounted(load);
 
     <!-- Programs -->
     <div v-for="p in data.programs" :key="p.code" class="card !p-5"
-      :class="p.code in selected ? '!ring-brand-500/40' : ''">
+      :class="p.code in selected ? '!border-brand-400' : ''">
       <div class="flex flex-wrap items-start gap-3">
         <input type="checkbox" class="mt-1" :checked="p.code in selected" @change="toggle(p.code)"
           :aria-label="`Include ${p.name} in funding stack`" />

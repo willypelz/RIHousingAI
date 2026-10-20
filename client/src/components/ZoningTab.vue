@@ -113,7 +113,7 @@ onMounted(load);
     <p class="flex items-center gap-2 text-xs text-slate-500"><AppIcon name="info" :size="14" class="shrink-0 text-amber-500" /> {{ tr(data.disclaimer) }}</p>
 
     <!-- Step 1 · Utilities: drives the approval pathway -->
-    <div class="card !ring-brand-500/25">
+    <div class="card !border-brand-300">
       <div class="mb-4 flex items-center gap-3">
         <span class="stat-icon bg-brand-700 text-white">1</span>
         <div>

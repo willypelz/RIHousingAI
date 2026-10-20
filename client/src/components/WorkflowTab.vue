@@ -83,7 +83,7 @@ onMounted(load);
       </div>
     </div>
 
-    <div v-if="progress.bottlenecks.length" class="card !bg-amber-50/70 !ring-amber-200">
+    <div v-if="progress.bottlenecks.length" class="card !border-amber-300 !bg-amber-50/70">
       <h3 class="mb-2 flex items-center gap-2 text-sm font-bold text-amber-900"><AppIcon name="info" :size="16" /> Potential bottlenecks & recommended follow-up</h3>
       <div v-for="(b, i) in progress.bottlenecks" :key="i" class="text-sm leading-relaxed text-amber-800">
         <strong>{{ b.stage }}</strong> ({{ b.approval }})<span v-if="b.days_elapsed != null"> — {{ b.days_elapsed }} days since submission</span>: {{ b.recommendation }}

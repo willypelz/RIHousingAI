@@ -90,7 +90,7 @@ function downloadReport() {
     </div>
 
     <template v-if="tab === 'workflow'">
-      <button v-if="utilitiesUnknown" class="card card-hover mb-4 flex w-full items-center gap-3 !p-4 text-left !ring-amber-200"
+      <button v-if="utilitiesUnknown" class="card card-hover mb-4 flex w-full items-center gap-3 !border-amber-300 !bg-amber-50/40 !p-4 text-left"
         @click="tab = 'zoning'">
         <span class="stat-icon bg-amber-50 text-amber-600"><AppIcon name="map" :size="20" /></span>
         <span class="text-sm"><strong class="text-slate-900">Start with Zoning.</strong>
