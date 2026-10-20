@@ -12,16 +12,24 @@ async function paInProject(paId: string | number, projectId: number) {
   return pa && pa.project_id === projectId ? pa : null;
 }
 
-/** Record agency feedback (comment / RAI). */
+/** Record agency feedback (comment / RAI), optionally tied to a specific checklist item. */
 reviewsRouter.post('/:projectId/approvals/:paId/comments', requireProjectAccess(), async (req, res) => {
-  const { body, comment_type = 'comment', agency_name, stage_id } = req.body || {};
+  const { body, comment_type = 'comment', agency_name, stage_id, checklist_item_id } = req.body || {};
   if (!body) return res.status(400).json({ error: 'Comment body required' });
   const projectId = Number(req.params.projectId);
   const pa = await paInProject(req.params.paId, projectId);
   if (!pa) return res.status(404).json({ error: 'Approval not found' });
 
+  let itemId: number | null = null;
+  if (checklist_item_id) {
+    const item = await getById('checklist_items', checklist_item_id);
+    if (!item || item.project_id !== projectId) return res.status(404).json({ error: 'Checklist item not found' });
+    itemId = item.id;
+  }
+
   const comment = await insert('review_comments', {
     project_approval_id: pa.id, project_id: projectId, stage_id: stage_id ? Number(stage_id) : null,
+    checklist_item_id: itemId,
     author_user_id: req.user!.id, agency_name: agency_name || null,
     comment_type, body, status: 'open', created_at: now(),
   });

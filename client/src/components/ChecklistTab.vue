@@ -6,14 +6,22 @@ import AppIcon from './AppIcon.vue';
 const props = defineProps<{ projectId: number }>();
 const items = ref<any[]>([]);
 const approvals = ref<Record<string, any>>({});
-const printLanguage = ref('en');
-const printing = ref(false);
+const comments = ref<any[]>([]);
 const err = ref('');
 
+const printLanguage = ref('en');
+const printing = ref(false);
 const LANGUAGES = [
   { code: 'en', name: 'English' }, { code: 'es', name: 'Español' }, { code: 'pt', name: 'Português' },
   { code: 'kea', name: 'Kriolu' }, { code: 'ht', name: 'Kreyòl' }, { code: 'km', name: 'ខ្មែរ' },
 ];
+
+// Per-item feedback UI state
+const openThread = ref<number | null>(null);
+const newComment = ref<Record<number, { type: string; body: string }>>({});
+const responseDrafts = ref<Record<number, string>>({});
+const busyAi = ref<number | null>(null);
+const commentBusy = ref<number | null>(null);
 
 const grouped = computed(() => {
   const g: Record<string, any[]> = {};
@@ -21,16 +29,16 @@ const grouped = computed(() => {
   return g;
 });
 
+const totals = computed(() => {
+  const done = items.value.filter(i => i.status === 'complete').length;
+  const na = items.value.filter(i => i.status === 'not_applicable').length;
+  return { done, total: items.value.length, left: items.value.length - done - na };
+});
+
 const TYPE_ICONS: Record<string, string> = {
   form: 'document', document: 'paperclip', plan: 'map', certification: 'pencil', fee: 'currency',
   instruction: 'info', prerequisite: 'link', referral: 'arrow-right', hearing: 'scale',
 };
-
-const comments = ref<any[]>([]);
-const newFeedback = ref<Record<string, { type: string; body: string }>>({});
-const responseDrafts = ref<Record<number, string>>({});
-const busyAi = ref<number | null>(null);
-const feedbackBusy = ref<string | null>(null);
 
 async function load() {
   const [cl, pw, cm] = await Promise.all([
@@ -40,7 +48,6 @@ async function load() {
   ]);
   items.value = cl.items;
   comments.value = cm.comments;
-  // Per-approval contact + published timeline for group headers and the printout
   const map: Record<string, any> = {};
   for (const a of pw.approvals) {
     map[a.name] = {
@@ -54,27 +61,31 @@ async function load() {
   approvals.value = map;
 }
 
-function groupComments(approval: string) {
-  const paId = approvals.value[approval]?.pa_id;
-  return comments.value.filter(c => c.project_approval_id === paId);
-}
+const itemComments = (itemId: number) => comments.value.filter(c => c.checklist_item_id === itemId);
+const openCount = (itemId: number) => itemComments(itemId).filter(c => c.status !== 'resolved').length;
+const groupOpenCount = (group: any[]) => group.reduce((n, i) => n + openCount(i.id), 0);
 
+async function toggleItem(item: any) {
+  const status = item.status === 'complete' ? 'pending' : 'complete';
+  await api.patch(`/projects/${props.projectId}/checklist/${item.id}`, { status });
+  await load();
+}
 async function setStatus(item: any, status: string) {
   await api.patch(`/projects/${props.projectId}/checklist/${item.id}`, { status });
   await load();
 }
 
-async function addFeedback(approval: string) {
-  const f = newFeedback.value[approval];
-  const paId = approvals.value[approval]?.pa_id;
-  if (!f?.body || !paId) return;
-  feedbackBusy.value = approval; err.value = '';
+async function addComment(item: any) {
+  const f = newComment.value[item.id];
+  if (!f?.body) return;
+  commentBusy.value = item.id; err.value = '';
   try {
-    await api.post(`/projects/${props.projectId}/approvals/${paId}/comments`, { body: f.body, comment_type: f.type || 'comment' });
-    newFeedback.value[approval] = { type: 'comment', body: '' };
+    await api.post(`/projects/${props.projectId}/approvals/${item.project_approval_id}/comments`,
+      { body: f.body, comment_type: f.type || 'comment', checklist_item_id: item.id });
+    newComment.value[item.id] = { type: 'comment', body: '' };
     await load();
   } catch (e: any) { err.value = e.message; }
-  finally { feedbackBusy.value = null; }
+  finally { commentBusy.value = null; }
 }
 
 async function respond(commentId: number, useAi = false) {
@@ -96,8 +107,7 @@ async function resolveComment(id: number) {
 
 const esc = (s: any) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-/** One-page printable checklist. If a non-English language is selected, item titles and
- *  labels are translated via the existing translate endpoint (names/links preserved). */
+/** One-page printable checklist, translated when a non-English language is selected. */
 async function printChecklist() {
   printing.value = true; err.value = '';
   try {
@@ -105,11 +115,12 @@ async function printChecklist() {
       'done', 'This is a working checklist from official sources, not an official determination. Confirm requirements, fees, and timelines with the responsible authorities.'];
     let texts = [...labels, ...Object.keys(grouped.value), ...items.value.map(i => i.title)];
     if (printLanguage.value !== 'en') {
-      const { translations } = await api.post(`/projects/${props.projectId}/zoning/translate`, { language: printLanguage.value, texts: texts.slice(0, 80) });
-      const extra = texts.length > 80
-        ? (await api.post(`/projects/${props.projectId}/zoning/translate`, { language: printLanguage.value, texts: texts.slice(80) })).translations
-        : [];
-      texts = [...translations, ...extra];
+      const out: string[] = [];
+      for (let i = 0; i < texts.length; i += 80) {
+        const { translations } = await api.post(`/projects/${props.projectId}/zoning/translate`, { language: printLanguage.value, texts: texts.slice(i, i + 80) });
+        out.push(...translations);
+      }
+      texts = out;
     }
     const T: Record<string, string> = {};
     [...labels, ...Object.keys(grouped.value), ...items.value.map(i => i.title)].forEach((orig, i) => { T[orig] = texts[i]; });
@@ -151,76 +162,113 @@ onMounted(load);
 
 <template>
   <div class="space-y-5">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <p class="hint max-w-md">Each item cites its official source. Fees are never estimated — confirm with the cited authority.</p>
+    <!-- Progress header -->
+    <div class="card flex flex-wrap items-center gap-5 !py-5">
+      <div class="relative h-16 w-16 shrink-0" role="img" :aria-label="`${totals.done} of ${totals.total} items complete`">
+        <svg viewBox="0 0 36 36" class="h-16 w-16 -rotate-90">
+          <circle cx="18" cy="18" r="15.9" fill="none" class="stroke-slate-100" stroke-width="3.5" />
+          <circle cx="18" cy="18" r="15.9" fill="none" class="stroke-brand-500 transition-all duration-500" stroke-width="3.5"
+            stroke-linecap="round" :stroke-dasharray="`${(totals.done / Math.max(1, totals.total)) * 100}, 100`" />
+        </svg>
+        <span class="absolute inset-0 flex items-center justify-center text-sm font-extrabold text-slate-900">
+          {{ Math.round((totals.done / Math.max(1, totals.total)) * 100) }}%
+        </span>
+      </div>
+      <div class="min-w-0 flex-1">
+        <h2 class="text-[1.05rem] font-bold text-slate-900">{{ totals.done }} of {{ totals.total }} items complete</h2>
+        <p class="hint mt-0.5">{{ totals.left }} to go · every item cites an official source — fees are never estimated.</p>
+      </div>
       <div class="flex items-center gap-1.5">
         <label class="sr-only" for="cl-lang">Printout language</label>
         <select id="cl-lang" v-model="printLanguage" class="input !w-auto !py-2 text-xs">
           <option v-for="l in LANGUAGES" :key="l.code" :value="l.code">{{ l.name }}</option>
         </select>
         <button class="btn-secondary" :disabled="printing" @click="printChecklist">
-          <AppIcon name="printer" :size="15" /> {{ printing ? 'Preparing…' : 'Print one-page summary' }}
+          <AppIcon name="printer" :size="15" /> {{ printing ? 'Preparing…' : 'Print' }}
         </button>
       </div>
     </div>
     <p v-if="err" role="alert" class="rounded-lg bg-rose-50 p-2.5 text-sm text-rose-700">{{ err }}</p>
-    <div v-for="(group, approval) in grouped" :key="approval" class="card">
-      <div class="mb-3">
-        <h2 class="text-[1.05rem] font-bold text-slate-900">{{ approval }}
-          <span class="ml-2 text-xs font-normal text-slate-500">{{ group.filter(i => i.status === 'complete').length }}/{{ group.length }} complete</span>
-        </h2>
-        <p v-if="approvals[approval]" class="mt-0.5 text-xs text-slate-500">
-          {{ approvals[approval].contact }}<span v-if="approvals[approval].phone"> · {{ approvals[approval].phone }}</span>
-          <span v-if="approvals[approval].confirm" class="ml-1 font-medium text-amber-600">· confirm with the town</span>
-        </p>
-        <p v-if="approvals[approval]?.estimate" class="mt-0.5 text-xs text-slate-500">Published timeline: {{ approvals[approval].estimate }}</p>
-        <div class="progress-track mt-2"><div class="progress-fill" :style="{ width: `${(group.filter(i => i.status === 'complete').length / group.length) * 100}%` }"></div></div>
-      </div>
-      <div v-for="item in group" :key="item.id" class="flex flex-wrap items-start gap-3 border-b border-slate-100 py-2 last:border-0 sm:flex-nowrap">
-        <input type="checkbox" class="mt-1" :checked="item.status === 'complete'"
-          @change="setStatus(item, ($event.target as HTMLInputElement).checked ? 'complete' : 'pending')" />
+
+    <!-- Approval groups -->
+    <div v-for="(group, approval) in grouped" :key="approval" class="card !p-0">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-slate-100 px-6 py-4">
         <div class="min-w-0 flex-1">
-          <p class="flex items-center gap-1.5 text-sm font-medium" :class="item.status === 'complete' ? 'text-slate-500 line-through' : 'text-slate-700'">
-            <AppIcon :name="TYPE_ICONS[item.item_type] || 'info'" :size="14" class="text-slate-500" /> {{ item.title }}
+          <h2 class="text-[1.05rem] font-bold text-slate-900">{{ approval }}</h2>
+          <p v-if="approvals[approval]" class="hint mt-0.5">
+            {{ approvals[approval].contact }}<span v-if="approvals[approval].phone"> · {{ approvals[approval].phone }}</span>
+            <span v-if="approvals[approval].confirm" class="font-medium text-amber-600"> · confirm with the town</span>
           </p>
-          <p class="text-xs text-slate-500">{{ item.description }}</p>
-          <p class="mt-0.5 text-[11px] text-slate-500">
-            Responsible: {{ item.responsible_authority }}
-            <template v-if="item.source_url"> · <a :href="item.source_url" target="_blank" class="link">source ↗</a> (verified {{ item.source_verified?.slice(0, 10) }})</template>
-            <template v-if="item.submission_link"> · <a :href="item.submission_link" target="_blank" class="link">submit ↗</a></template>
-          </p>
-          <p v-if="item.item_type === 'fee' && item.fee_note" class="text-[11px] text-amber-700">Fee: {{ item.fee_note }}</p>
+          <p v-if="approvals[approval]?.estimate" class="hint mt-0.5">Published timeline: {{ approvals[approval].estimate }}</p>
         </div>
-        <select class="ml-6 shrink-0 rounded border border-slate-200 p-1 text-[11px] sm:ml-0" :value="item.status"
-          @change="setStatus(item, ($event.target as HTMLSelectElement).value)">
-          <option value="pending">pending</option><option value="in_progress">in progress</option>
-          <option value="complete">complete</option><option value="not_applicable">n/a</option>
-        </select>
+        <div class="flex items-center gap-3">
+          <span v-if="groupOpenCount(group)" class="badge bg-amber-100 text-amber-800">
+            <AppIcon name="chat" :size="11" /> {{ groupOpenCount(group) }} open feedback
+          </span>
+          <div class="w-28">
+            <p class="mb-1 text-right text-[11px] font-semibold text-slate-500">{{ group.filter(i => i.status === 'complete').length }}/{{ group.length }}</p>
+            <div class="progress-track"><div class="progress-fill" :style="{ width: `${(group.filter(i => i.status === 'complete').length / group.length) * 100}%` }"></div></div>
+          </div>
+        </div>
       </div>
 
-      <!-- Reviews & feedback for this approval -->
-      <details class="group mt-3 border-t border-slate-100 pt-3">
-        <summary class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-700 marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
-          <AppIcon name="arrow-right" :size="12" class="text-slate-400 transition-transform group-open:rotate-90" />
-          <AppIcon name="chat" :size="14" class="text-slate-400" /> Reviews & feedback
-          <span v-if="groupComments(approval).filter(c => c.status !== 'resolved').length"
-            class="badge bg-amber-100 text-amber-800">{{ groupComments(approval).filter(c => c.status !== 'resolved').length }} open</span>
-          <span v-else-if="groupComments(approval).length" class="badge bg-slate-100 text-slate-500">{{ groupComments(approval).length }}</span>
-        </summary>
-        <div class="mt-2 space-y-3 pl-5">
-          <p v-if="!groupComments(approval).length" class="hint">No feedback recorded for this approval yet.</p>
-          <div v-for="c in groupComments(approval)" :key="c.id" class="rounded-xl bg-slate-50/80 p-3 ring-1 ring-slate-200/70">
+      <!-- Items -->
+      <div v-for="item in group" :key="item.id" class="border-b border-slate-50 last:border-0">
+        <div class="group/item flex items-start gap-3 px-6 py-3 transition-colors hover:bg-slate-50/60">
+          <button class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            :class="item.status === 'complete' ? 'bg-brand-600 ring-brand-600 text-white' : 'bg-white ring-slate-300 text-transparent hover:ring-brand-400'"
+            :aria-label="`Mark ${item.title} ${item.status === 'complete' ? 'incomplete' : 'complete'}`"
+            @click="toggleItem(item)">
+            <AppIcon name="check" :size="12" />
+          </button>
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <AppIcon :name="TYPE_ICONS[item.item_type] || 'info'" :size="13" class="text-slate-400" />
+              <p class="text-sm font-medium" :class="item.status === 'complete' ? 'text-slate-400 line-through' : item.status === 'not_applicable' ? 'text-slate-400' : 'text-slate-800'">{{ item.title }}</p>
+              <span v-if="item.status === 'in_progress'" class="badge bg-brand-50 text-brand-700">in progress</span>
+              <span v-if="item.status === 'not_applicable'" class="badge bg-slate-100 text-slate-500">n/a</span>
+            </div>
+            <p class="mt-0.5 text-xs leading-relaxed text-slate-500">{{ item.description }}</p>
+            <p v-if="item.item_type === 'fee' && item.fee_note" class="mt-0.5 text-[11px] text-amber-700">Fee: {{ item.fee_note }}</p>
+            <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-400">
+              <span>{{ item.responsible_authority }}</span>
+              <a v-if="item.source_url" :href="item.source_url" target="_blank" class="link inline-flex items-center gap-0.5">source <AppIcon name="external" :size="10" /></a>
+              <a v-if="item.submission_link" :href="item.submission_link" target="_blank" class="link inline-flex items-center gap-0.5">submit <AppIcon name="external" :size="10" /></a>
+            </div>
+          </div>
+          <div class="flex shrink-0 items-center gap-1.5">
+            <button class="relative rounded-lg p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              :class="openThread === item.id ? 'bg-brand-50 text-brand-700' : openCount(item.id) ? 'text-amber-600 hover:bg-amber-50' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'"
+              :aria-expanded="openThread === item.id"
+              :aria-label="`Feedback for ${item.title} (${itemComments(item.id).length})`"
+              @click="openThread = openThread === item.id ? null : item.id">
+              <AppIcon name="chat" :size="16" />
+              <span v-if="openCount(item.id)" class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-bold text-white">{{ openCount(item.id) }}</span>
+            </button>
+            <select class="rounded-lg border-0 bg-transparent p-1 text-[11px] text-slate-400 ring-1 ring-transparent transition-all hover:ring-slate-200 focus-visible:outline-none focus-visible:ring-brand-500 group-hover/item:text-slate-600"
+              :value="item.status" :aria-label="`Status of ${item.title}`"
+              @change="setStatus(item, ($event.target as HTMLSelectElement).value)">
+              <option value="pending">pending</option><option value="in_progress">in progress</option>
+              <option value="complete">complete</option><option value="not_applicable">n/a</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Per-item feedback thread -->
+        <div v-if="openThread === item.id" class="animate-fade-in border-t border-slate-100 bg-slate-50/70 px-6 py-4 pl-14">
+          <div v-for="c in itemComments(item.id)" :key="c.id" class="mb-3 rounded-xl bg-white p-3 ring-1 ring-slate-200/80">
             <div class="flex flex-wrap items-center gap-2">
               <span class="badge" :class="c.comment_type === 'rai' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-600'">{{ c.comment_type }}</span>
               <span v-if="c.agency_name" class="text-[11px] text-slate-500">from {{ c.agency_name }}</span>
               <span class="badge" :class="c.status === 'resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'">{{ c.status }}</span>
-              <button v-if="c.status !== 'resolved'" class="link ml-auto text-xs" @click="resolveComment(c.id)">resolve</button>
+              <span class="ml-auto text-[10px] text-slate-400">{{ new Date(c.created_at).toLocaleDateString() }}</span>
+              <button v-if="c.status !== 'resolved'" class="link text-xs" @click="resolveComment(c.id)">resolve</button>
             </div>
-            <p class="mt-1 text-sm text-slate-700">{{ c.body }}</p>
-            <div v-for="r in c.responses || []" :key="r.id" class="mt-2 rounded-lg bg-white p-2 text-xs text-slate-600 ring-1 ring-slate-200/70">
+            <p class="mt-1.5 text-sm text-slate-700">{{ c.body }}</p>
+            <div v-for="r in c.responses || []" :key="r.id" class="mt-2 rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">
               <span class="badge bg-violet-100 text-violet-700">{{ r.is_draft ? 'DRAFT' : 'sent' }}</span>
               <span v-if="r.ai_generated" class="badge ml-1 bg-brand-100 text-brand-700">AI-drafted — review before sending</span>
-              <p class="mt-1 whitespace-pre-wrap">{{ r.body }}</p>
+              <p class="mt-1 whitespace-pre-wrap leading-relaxed">{{ r.body }}</p>
             </div>
             <div v-if="c.status !== 'resolved'" class="mt-2 flex flex-wrap gap-2">
               <input v-model="responseDrafts[c.id]" class="input min-w-40 flex-1 !py-1.5 text-xs" placeholder="Draft a response…"
@@ -232,18 +280,23 @@ onMounted(load);
             </div>
           </div>
           <div class="flex flex-wrap gap-2">
-            <select v-model="(newFeedback[approval] ??= { type: 'comment', body: '' }).type" class="input !w-auto !py-1.5 text-xs" :aria-label="`Feedback type for ${approval}`">
-              <option value="comment">Review comment</option>
-              <option value="rai">Request for info (RAI)</option>
+            <select v-model="(newComment[item.id] ??= { type: 'comment', body: '' }).type" class="input !w-auto !py-1.5 text-xs" :aria-label="`Feedback type for ${item.title}`">
+              <option value="comment">Comment</option>
+              <option value="rai">Request for info</option>
               <option value="condition_note">Condition note</option>
             </select>
-            <input v-model="(newFeedback[approval] ??= { type: 'comment', body: '' }).body" class="input min-w-44 flex-1 !py-1.5 text-xs"
-              placeholder="Record agency feedback…" @keydown.enter="newFeedback[approval]?.body && addFeedback(approval)" />
-            <button class="btn shrink-0 !px-3 !py-1.5 text-xs" :disabled="!newFeedback[approval]?.body || feedbackBusy === approval"
-              @click="addFeedback(approval)">{{ feedbackBusy === approval ? 'Saving…' : 'Record' }}</button>
+            <input v-model="(newComment[item.id] ??= { type: 'comment', body: '' }).body" class="input min-w-44 flex-1 !py-1.5 text-xs"
+              :placeholder="`Record feedback on “${item.title}”…`" @keydown.enter="newComment[item.id]?.body && addComment(item)" />
+            <button class="btn shrink-0 !px-3 !py-1.5 text-xs" :disabled="!newComment[item.id]?.body || commentBusy === item.id"
+              @click="addComment(item)">{{ commentBusy === item.id ? 'Saving…' : 'Record' }}</button>
           </div>
         </div>
-      </details>
+      </div>
+    </div>
+
+    <div v-if="!items.length" class="card space-y-3" aria-busy="true">
+      <div class="skeleton h-6 w-1/2"></div>
+      <div v-for="i in 5" :key="i" class="skeleton h-10 w-full"></div>
     </div>
   </div>
 </template>
