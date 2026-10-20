@@ -10,14 +10,12 @@ const error = ref(''); const busy = ref(false);
 // Only the essentials. Applicant details default from your account; utilities,
 // zoning district, and the rest are refined in the Zoning tab after creation.
 const form = ref({
-  name: '', address: '', municipality_id: 0,
+  name: '', address: '', municipality_id: '' as number | '',
   dev_type: 'multi_family', units: 10, construction_kind: 'new_construction',
 });
 
 onMounted(async () => {
   municipalities.value = (await api.get('/municipalities')).municipalities;
-  const cumberland = municipalities.value.find((m: any) => m.name === 'Cumberland');
-  if (cumberland) form.value.municipality_id = cumberland.id;
 });
 
 async function submit() {
@@ -41,7 +39,8 @@ async function submit() {
       <div><label class="label">Street address</label><input v-model="form.address" required class="input" placeholder="e.g. 100 Mendon Rd" /></div>
       <div class="grid gap-4 sm:grid-cols-2">
         <div><label class="label">Municipality</label>
-          <select v-model="form.municipality_id" class="input">
+          <select v-model="form.municipality_id" required class="input">
+            <option value="" disabled>Select a municipality…</option>
             <option v-for="m in municipalities" :key="m.id" :value="m.id">{{ m.name }}{{ m.coverage_status !== 'planned' ? ' (verified local data)' : '' }}</option>
           </select>
         </div>
