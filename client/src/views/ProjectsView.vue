@@ -17,7 +17,7 @@ onMounted(async () => {
     <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="page-title">Your Projects</h1>
-        <p class="mt-1.5 text-[15px] text-slate-500">Track approvals, checklists, and reviews in one place.</p>
+        <p class="mt-1.5 text-[15px] text-slate-500">Zoning, approvals, and funding — one workspace per project.</p>
       </div>
       <router-link to="/projects/new" class="btn"><AppIcon name="plus" :size="15" /> Register Project</router-link>
     </div>

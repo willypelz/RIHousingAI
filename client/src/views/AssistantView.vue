@@ -14,10 +14,11 @@ const lastSources = ref<any[]>([]);
 const scroller = ref<HTMLElement | null>(null);
 
 const SUGGESTIONS = [
+  'How do I find the zoning district for my lot?',
   'What do I need to submit for my 10-unit project?',
-  'Which department receives my application?',
   'What happens after submission?',
-  'Which approvals and inspections remain before construction?',
+  'Could the 2024 ADU reforms add units to my lot?',
+  'Which funding programs fit affordable housing?',
 ];
 
 onMounted(async () => {

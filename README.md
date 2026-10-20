@@ -1,8 +1,12 @@
-# RIHousingAI — Rhode Island Housing Approval Navigator
+# RIHousingAI — Zoning, Approvals & Funding Navigator for Rhode Island Housing
 
-An AI-powered platform for navigating the **administrative approval process** for residential development in Rhode Island (initial coverage: **Cumberland**; schema supports all 39 municipalities).
+An AI-powered platform covering the full residential development journey in Rhode Island, across all 39 municipalities:
 
-> RIHousingAI provides approval navigation and administrative assistance only. It does **not** perform zoning analysis, predict approval outcomes, or invent fees/deadlines — all procedural guidance cites official sources, and users are directed to confirm with the responsible authority.
+1. **What can be built here?** — zoning district lookup links (RI Zoning Atlas, RIGIS, all 39 town ordinances), dimensional rules to check, and the 2024–2026 state housing reforms
+2. **What does it take to get approved?** — approval pathway, source-cited checklists, workflow with timeline/calendar, document management, AI completeness checks, review coordination
+3. **How does it get funded?** — RI affordable-housing funding programs with source links and a capital-stack gap calculator
+
+> RIHousingAI navigates official sources; it does **not** make zoning determinations, predict approval outcomes, estimate funding awards, or invent fees/deadlines — everything cites official sources, and users are directed to confirm with the responsible authority.
 
 ## Stack
 

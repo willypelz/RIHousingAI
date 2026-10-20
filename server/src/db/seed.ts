@@ -155,6 +155,32 @@ Confirm sewer availability for the specific parcel with DPW.`,
     null,
     null);
 
+
+  // Zoning and funding reference sources (ground the assistant beyond approvals)
+  await source(sbcId,
+    'HousingWorks RI / National Zoning Atlas',
+    'Rhode Island Zoning Atlas',
+    'https://experience.arcgis.com/experience/e9b8450970b643ee9dd71188ce59e766/',
+    'Live map of all 39 towns\u2019 zoning districts showing whether 1/2/3/4+ unit housing is allowed by right or by public hearing.',
+    `The RI Zoning Atlas maps every town's zoning districts in a standard format. For each district it records whether one-, two-, three-, and four-or-more-unit housing is allowed by right, by public hearing, or not at all, plus lot sizes. Use it to find a parcel's district, then confirm the rules in the town's ordinance \u2014 the Atlas summarizes the code and can lag recent amendments. The legal answer for a parcel comes from the town's official zoning map and ordinance, or a zoning certificate (RIGL 45-24-54, 20-day response).`,
+    null, null);
+
+  await source(sbcId,
+    'RI Division of Statewide Planning',
+    'RI Land Use Reforms 2022\u20132026 (Technical Paper 173)',
+    'https://planning.ri.gov/planning-areas/land-use',
+    'Statewide land-use law amendments 2022\u20132026: ADUs by right, townhouses, housing in commercial districts, adaptive reuse, parking caps near transit, substandard lots, inclusionary zoning.',
+    `Key 2024\u20132026 reforms that change what a lot can hold: ADUs \u2014 one per lot allowed by right (RIGL 45-24-73, effective June 2024) on owner-occupied lots for family with disabilities, lots of 20,000+ sq ft, or within an existing footprint; towns must allow at least 900\u20131,200 sq ft. Townhouses are a permitted use in districts allowing 2+ units (effective Jan 2026). Zoning must allow housing in some commercial districts and beyond single-family where public water/sewer exist inside the Urban Services Boundary (Jan 2026). Adaptive reuse of commercial buildings to 50%+ residential is a permitted use with minimum-density protections. Parking near frequent transit capped at 1 space/unit (June 2026). Substandard lots of record may not need relief solely for lot size (RIGL 45-24-38, amended repeatedly \u2014 quote current text). Inclusionary zoning: 15% affordable with matching density bonus (Jan 2025). Unified development review lets the planning board grant variances within development review. Zoning certificates must issue within 20 days (RIGL 45-24-54). Always confirm the current statute text.`,
+    null, null);
+
+  await source(sbcId,
+    'RIHousing',
+    'RIHousing Developer Funding Programs',
+    'https://www.rihousing.com/developers/',
+    'Capital sources for affordable housing: federal LIHTC (9% and 4%), RI state LIHTC, Housing Production Fund, HOME, Housing Trust Fund, construction/permanent lending.',
+    `RIHousing administers the main capital sources for affordable housing development in Rhode Island: competitive 9% federal Low-Income Housing Tax Credits awarded through the Qualified Allocation Plan; non-competitive 4% credits with tax-exempt bonds; the RI state low-income housing tax credit (RIGL 44-71); the Housing Production Fund for deeply affordable units; federal HOME and National Housing Trust Fund dollars; and construction-to-permanent loans. Other sources include voter-approved housing bond rounds, CDBG through the Office of Housing and Community Development or entitlement cities, and FHLBank Boston's Affordable Housing Program via member banks. Most subsidized projects combine several sources. Award amounts and deadlines are set per funding round \u2014 check each program's source page or contact the program officer; this platform never estimates awards.`,
+    null, null);
+
   // Approval types with applicability rules
   // slot: functional role (planning/building/fire/sewer/water/inspections). A municipal
   // type fills its slot for its municipality; a generic statewide type with the same slot

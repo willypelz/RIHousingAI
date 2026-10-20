@@ -20,15 +20,15 @@ async function submit() {
     <div class="hidden flex-1 flex-col justify-between bg-gradient-to-br from-brand-950 via-brand-900 to-brand-700 p-10 text-white lg:flex">
       <div class="text-xl font-extrabold tracking-tight">RIHousing<span class="text-brand-300">AI</span></div>
       <div class="animate-fade-up">
-        <h1 class="text-4xl font-extrabold leading-tight tracking-tight">Navigate Rhode Island<br />housing approvals<br /><span class="bg-gradient-to-r from-brand-300 to-sky-300 bg-clip-text text-transparent">with confidence.</span></h1>
-        <p class="mt-4 max-w-md text-sm leading-relaxed text-brand-200">Source-backed checklists, workflow tracking, AI completeness checks, and an assistant grounded in official municipal and state procedures.</p>
+        <h1 class="text-4xl font-extrabold leading-tight tracking-tight">From lot<br />to keys —<br /><span class="bg-gradient-to-r from-brand-300 to-sky-300 bg-clip-text text-transparent">navigate it all.</span></h1>
+        <p class="mt-4 max-w-md text-sm leading-relaxed text-brand-200">What can be built here, what it takes to get approved, and how it gets funded — zoning, approval workflow, checklists, funding programs, and an AI assistant, all grounded in official RI sources.</p>
         <div class="mt-6 flex gap-6 text-xs text-brand-300">
           <div><p class="text-2xl font-bold text-white">39</p>municipalities modeled</div>
           <div><p class="text-2xl font-bold text-white">100%</p>source-cited guidance</div>
           <div><p class="text-2xl font-bold text-white">0</p>invented fees or deadlines</div>
         </div>
       </div>
-      <p class="text-xs text-brand-400">Administrative navigation only — not zoning analysis or approval decisions.</p>
+      <p class="text-xs text-brand-400">Navigation from official sources — never zoning determinations, approval decisions, or award estimates.</p>
     </div>
     <div class="flex flex-1 items-center justify-center bg-slate-50 p-6">
       <div class="w-full max-w-sm animate-fade-up">

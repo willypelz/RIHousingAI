@@ -16,10 +16,10 @@ const scroller = ref<HTMLElement | null>(null);
 const projectName = ref('');
 
 const SUGGESTIONS = [
+  'How do I find the zoning district for my lot?',
   'What do I need to submit for my project?',
-  'Which department receives my application?',
-  'What happens after submission?',
-  'Which approvals remain before construction?',
+  'Could the ADU reforms add units to my lot?',
+  'What funding programs fit affordable housing?',
 ];
 
 // Auto-detect project context from the current route

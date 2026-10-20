@@ -95,8 +95,8 @@ onUnmounted(() => { document.removeEventListener('keydown', onKeydown); document
     </main>
     <AssistantWidget v-if="auth.isAuthenticated && $route.path !== '/assistant'" />
     <footer v-if="auth.isAuthenticated" class="mx-auto max-w-6xl border-t border-slate-200 px-4 py-5 text-xs leading-relaxed text-slate-400">
-      RIHousingAI provides administrative navigation assistance only. It does not perform zoning analysis or make approval decisions.
-      Verify all requirements, fees, and deadlines with the responsible authorities.
+      RIHousingAI helps you navigate zoning, approvals, and funding for Rhode Island housing from official sources.
+      It does not make zoning determinations, approval decisions, or funding award estimates — verify all requirements, fees, and deadlines with the responsible authorities.
     </footer>
   </div>
 </template>
