@@ -2,25 +2,40 @@ import { Router } from 'express';
 import { insert, where, all, getById, updateById, now, indexBy, sortBy } from '../db/firestore.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { audit } from '../middleware/audit.js';
+import { ORDINANCE_LINKS, MAP_TOOLS, ZONING_LINKS_CHECKED } from './zoningData.js';
 
 export const sourcesRouter = Router();
 sourcesRouter.use(requireAuth);
 
+/** Sources tagged with their municipality (null = statewide) so the client can
+ *  filter by location instead of showing one town's sources to everyone. */
 sourcesRouter.get('/', async (_req, res) => {
   const sources = sortBy(await all('official_sources'), 'id');
   const agencies = indexBy(await all('agencies'));
+  const munis = indexBy(await all('municipalities'));
   const changes = await all('source_changes');
   res.json({
     sources: sources.map(s => {
       const a = agencies[s.agency_id] || {};
+      const muniId = a.municipality_id ?? null;
       return {
         ...s,
         agency_name: a.name ?? null, agency_department: a.department ?? null, agency_level: a.level ?? null,
         agency_phone: a.phone ?? null, agency_address: a.address ?? null, agency_website: a.website ?? null,
+        municipality_id: muniId, municipality_name: muniId ? munis[muniId]?.name ?? null : null,
         change_history: sortBy(changes.filter(c => c.source_id === s.id), 'changed_at', 'desc')
           .map(c => ({ changed_at: c.changed_at, change_note: c.change_note })),
       };
     }),
+  });
+});
+
+/** Every town's zoning ordinance location + statewide map tools (TP172, checked date). */
+sourcesRouter.get('/town-links', async (_req, res) => {
+  res.json({
+    links_checked: ZONING_LINKS_CHECKED,
+    map_tools: MAP_TOOLS,
+    towns: Object.entries(ORDINANCE_LINKS).map(([name, link]) => ({ name, ...link })),
   });
 });
 
