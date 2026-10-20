@@ -2,6 +2,7 @@
 import { ref, onMounted, nextTick } from 'vue';
 import { api } from '../api/client';
 import { renderMarkdown } from '../lib/markdown';
+import AppIcon from '../components/AppIcon.vue';
 
 const projects = ref<any[]>([]);
 const projectId = ref<string>('');
@@ -53,7 +54,7 @@ function newConversation() { conversationId.value = null; messages.value = []; l
 <template>
   <div class="mx-auto max-w-3xl">
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-xl font-bold text-slate-800">AI Approval Assistant</h1>
+      <h1 class="page-title">AI Approval Assistant</h1>
       <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
         <select v-model="projectId" class="input w-full min-w-0 flex-1 sm:w-64 sm:flex-none">
           <option value="">No project context</option>
@@ -65,7 +66,7 @@ function newConversation() { conversationId.value = null; messages.value = []; l
 
     <div ref="scroller" class="card mb-3 h-[55vh] space-y-3 overflow-y-auto sm:h-96">
       <div v-if="!messages.length" class="flex h-full flex-col items-center justify-center text-center text-sm text-slate-500">
-        <p class="text-3xl">💬</p>
+        <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-600"><AppIcon name="chat" :size="24" /></span>
         <p class="mb-4 mt-2 max-w-sm">Ask about the approval process for your project. Answers are grounded in official sources with citations.</p>
         <div class="flex max-w-md flex-wrap justify-center gap-2">
           <button v-for="s in SUGGESTIONS" :key="s"
@@ -75,14 +76,14 @@ function newConversation() { conversationId.value = null; messages.value = []; l
       </div>
       <div v-for="(m, i) in messages" :key="i" class="flex animate-fade-up items-end gap-2" :class="m.role === 'user' ? 'flex-row-reverse' : ''">
         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold shadow-soft"
-          :class="m.role === 'user' ? 'bg-brand-600 text-white' : 'bg-gradient-to-br from-brand-400 to-cyan-500 text-white'">
-          {{ m.role === 'user' ? '🙂' : '🤖' }}
+          :class="m.role === 'user' ? 'bg-brand-600 text-white' : 'bg-brand-700 text-white'">
+          <AppIcon :name="m.role === 'user' ? 'user' : 'sparkles'" :size="14" />
         </span>
-        <div v-if="m.role === 'user'" class="max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-gradient-to-b from-brand-600 to-brand-700 px-4 py-2.5 text-left text-sm text-white shadow-soft">{{ m.content }}</div>
+        <div v-if="m.role === 'user'" class="max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand-700 px-4 py-2.5 text-left text-sm text-white shadow-soft">{{ m.content }}</div>
         <div v-else class="max-w-[80%] space-y-0.5 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-2.5 text-left text-sm leading-relaxed text-slate-800 shadow-soft" v-html="renderMarkdown(m.content)"></div>
       </div>
       <div v-if="busy" class="flex items-end gap-2">
-        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-cyan-500 text-xs shadow-soft">🤖</span>
+        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-brand-700 text-white shadow-soft"><AppIcon name="sparkles" :size="14" /></span>
         <div class="flex gap-1 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-3 shadow-soft">
           <span class="h-1.5 w-1.5 animate-typing rounded-full bg-slate-400"></span>
           <span class="h-1.5 w-1.5 animate-typing rounded-full bg-slate-400" style="animation-delay: 0.15s"></span>
@@ -101,7 +102,7 @@ function newConversation() { conversationId.value = null; messages.value = []; l
       <input v-model="input" class="input" placeholder="Ask a question about your approval process…" :disabled="busy" />
       <button class="btn shrink-0" :disabled="busy || !input">Send</button>
     </form>
-    <p class="mt-2 text-xs text-slate-400">
+    <p class="mt-2 text-xs text-slate-500">
       Answers are informational, grounded in cited official sources, and never a substitute for confirmation from the responsible authority.
     </p>
   </div>
