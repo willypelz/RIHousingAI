@@ -6,20 +6,20 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
-    "migrate": "tsx src/db/migrate.ts",
-    "seed": "tsx src/db/seed.ts",
+    "seed": "tsx -e \"import('./src/db/seed.ts').then(m=>m.seed()).then(()=>process.exit(0))\"",
     "test": "vitest run"
   },
   "dependencies": {
+    "@google-cloud/firestore": "^9.3.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-async-errors": "^3.1.1",
+    "firebase-admin": "^14.5.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "pdf-parse": "^1.1.1",
-    "pg": "^8.12.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -30,7 +30,6 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^18.19.0",
     "@types/pdf-parse": "^1.1.4",
-    "@types/pg": "^8.11.6",
     "@types/supertest": "^7.2.1",
     "supertest": "^7.0.0",
     "tsx": "^4.16.0",
