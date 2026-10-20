@@ -9,6 +9,7 @@ import ReviewsTab from '../components/ReviewsTab.vue';
 import CompletenessTab from '../components/CompletenessTab.vue';
 import ZoningTab from '../components/ZoningTab.vue';
 import FundingTab from '../components/FundingTab.vue';
+import OverviewTab from '../components/OverviewTab.vue';
 import AppIcon from '../components/AppIcon.vue';
 
 const route = useRoute();
@@ -19,11 +20,12 @@ const tab = ref('');
 const utilitiesUnknown = computed(() =>
   project.value && (project.value.sewer_service === 'unknown' || project.value.water_service === 'unknown'));
 
-// Zoning comes first: it confirms the site facts that generate the approval pathway.
+// Zoning confirms the site facts that generate the pathway; Overview is home after that.
 const tabs = computed(() => [
-  { id: 'zoning', label: '1 · Zoning', badge: utilitiesUnknown.value ? 'Start here' : null },
-  { id: 'workflow', label: '2 · Workflow' },
-  { id: 'checklist', label: '3 · Checklist' },
+  { id: 'overview', label: 'Overview' },
+  { id: 'zoning', label: 'Zoning', badge: utilitiesUnknown.value ? 'Start here' : null },
+  { id: 'workflow', label: 'Workflow' },
+  { id: 'checklist', label: 'Checklist' },
   { id: 'funding', label: 'Funding' },
   { id: 'documents', label: 'Documents' },
   { id: 'completeness', label: 'Completeness' },
@@ -32,8 +34,8 @@ const tabs = computed(() => [
 
 onMounted(async () => {
   project.value = (await api.get(`/projects/${projectId}`)).project;
-  // Land on Zoning until the site facts are confirmed, then default to Workflow
-  tab.value = (route.query.tab as string) || (utilitiesUnknown.value ? 'zoning' : 'workflow');
+  // Land on Zoning until the site facts are confirmed, then default to Overview
+  tab.value = (route.query.tab as string) || (utilitiesUnknown.value ? 'zoning' : 'overview');
 });
 
 async function reloadProject() {
@@ -89,7 +91,8 @@ function downloadReport() {
       </button>
     </div>
 
-    <template v-if="tab === 'workflow'">
+    <OverviewTab v-if="tab === 'overview'" :project-id="projectId" :project="project" @navigate="tab = $event" />
+    <template v-else-if="tab === 'workflow'">
       <button v-if="utilitiesUnknown" class="card card-hover mb-4 flex w-full items-center gap-3 !border-amber-300 !bg-amber-50/40 !p-4 text-left"
         @click="tab = 'zoning'">
         <span class="stat-icon bg-amber-50 text-amber-600"><AppIcon name="map" :size="20" /></span>
