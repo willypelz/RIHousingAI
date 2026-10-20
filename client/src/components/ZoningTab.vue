@@ -16,6 +16,9 @@ const generatingSummary = ref(false);
 const district = ref('');
 const districtFrom = ref('');
 const checkValues = ref<Record<string, string>>({});
+const sewer = ref('unknown');
+const water = ref('unknown');
+const regenerated = ref(false);
 
 async function load() {
   const [z, s] = await Promise.all([
@@ -26,15 +29,19 @@ async function load() {
   summaries.value = s.summaries;
   district.value = z.district ?? '';
   districtFrom.value = z.district_confirmed_from ?? '';
+  sewer.value = z.sewer_service ?? 'unknown';
+  water.value = z.water_service ?? 'unknown';
   for (const c of z.checks) checkValues.value[c.key] = c.value ?? '';
 }
 
 async function save() {
-  saving.value = true; err.value = '';
+  saving.value = true; err.value = ''; regenerated.value = false;
   try {
-    await api.patch(`/projects/${props.projectId}/zoning`, {
+    const res = await api.patch(`/projects/${props.projectId}/zoning`, {
       district: district.value, district_confirmed_from: districtFrom.value, checks: checkValues.value,
+      sewer_service: sewer.value, water_service: water.value,
     });
+    regenerated.value = res.pathway_regenerated;
     await load();
   } catch (e: any) { err.value = e.message; }
   finally { saving.value = false; }
@@ -123,6 +130,27 @@ onMounted(load);
           <span class="text-xs text-slate-500"> — {{ tr(m.note) }}</span>
         </div>
       </div>
+    </div>
+
+    <!-- Utilities confirmation: drives the approval pathway -->
+    <div class="card border-brand-200">
+      <h2 class="mb-1 font-bold text-slate-900">Utilities for this lot</h2>
+      <p class="mb-3 text-xs text-slate-500">Confirm with the town (DPW / water department) or your engineer. Saving updates the approval pathway — e.g. public sewer removes the RIDEM septic permit, septic adds it.</p>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div><label class="label">Sewer service</label>
+          <select v-model="sewer" class="input">
+            <option value="unknown">Unknown — needs confirmation</option>
+            <option value="public_sewer">Public sewer</option>
+            <option value="septic">Septic (OWTS)</option>
+          </select></div>
+        <div><label class="label">Water service</label>
+          <select v-model="water" class="input">
+            <option value="unknown">Unknown — needs confirmation</option>
+            <option value="public_water">Public water</option>
+            <option value="well">Well</option>
+          </select></div>
+      </div>
+      <p v-if="regenerated" class="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">✓ Approval pathway regenerated from your zoning analysis — check the Workflow and Checklist tabs.</p>
     </div>
 
     <!-- What to check panel -->
