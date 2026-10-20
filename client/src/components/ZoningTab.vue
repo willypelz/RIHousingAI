@@ -56,7 +56,7 @@ const translatableTexts = computed(() => {
   const t: string[] = [data.value.disclaimer, data.value.ordinance?.note ?? '', data.value.reforms.note];
   for (const m of data.value.map_tools) t.push(m.note);
   for (const c of data.value.checks) { t.push(c.label); t.push(c.hint); }
-  for (const r of data.value.reforms.items) { t.push(r.summary); if (r.relevance) t.push(r.relevance); }
+  for (const r of data.value.reforms.items) { t.push(r.name); t.push(r.summary); if (r.relevance) t.push(r.relevance); }
   return t;
 });
 
@@ -193,7 +193,7 @@ onMounted(load);
       <details v-for="r in data.reforms.items" :key="r.code" class="group border-b border-slate-100 last:border-0">
         <summary class="flex cursor-pointer flex-wrap items-center gap-2 py-2.5 text-sm marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
           <AppIcon name="arrow-right" :size="12" class="text-slate-400 transition-transform group-open:rotate-90" />
-          <span class="font-semibold text-slate-800">{{ r.name }}</span>
+          <span class="font-semibold text-slate-800">{{ tr(r.name) }}</span>
           <span v-if="r.relevance" class="badge bg-brand-50 text-brand-700">relevant to you</span>
           <span class="ml-auto hidden text-[11px] text-slate-400 sm:block">{{ r.statute }}</span>
         </summary>

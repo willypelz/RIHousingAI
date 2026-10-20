@@ -38,8 +38,14 @@ async function reloadProject() {
   project.value = (await api.get(`/projects/${projectId}`)).project;
 }
 
+const reportLanguage = ref('en');
+const REPORT_LANGUAGES = [
+  { code: 'en', name: 'English' }, { code: 'es', name: 'Español' }, { code: 'pt', name: 'Português' },
+  { code: 'kea', name: 'Kriolu' }, { code: 'ht', name: 'Kreyòl' }, { code: 'km', name: 'ខ្មែរ' },
+];
+
 function downloadReport() {
-  api.download(`/projects/${projectId}/report`, `status-report-${projectId}.html`);
+  api.download(`/projects/${projectId}/report?language=${reportLanguage.value}`, `status-report-${projectId}.html`);
 }
 </script>
 
@@ -64,7 +70,13 @@ function downloadReport() {
             </p>
           </div>
         </div>
-        <button class="btn-secondary" @click="downloadReport"><AppIcon name="download" :size="15" /> Status report</button>
+        <div class="flex items-center gap-1.5">
+          <label class="sr-only" for="report-lang">Report language</label>
+          <select id="report-lang" v-model="reportLanguage" class="input !w-auto !py-2 text-xs">
+            <option v-for="l in REPORT_LANGUAGES" :key="l.code" :value="l.code">{{ l.name }}</option>
+          </select>
+          <button class="btn-secondary" @click="downloadReport"><AppIcon name="download" :size="15" /> Status report</button>
+        </div>
       </div>
     </div>
 
