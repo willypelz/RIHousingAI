@@ -41,7 +41,7 @@ export async function seed() {
   const ridemId = await agency('state', 'RI Department of Environmental Management (RIDEM)', 'Office of Water Resources', '(401) 222-4700', null, '235 Promenade Street, Providence, RI 02908', 'https://dem.ri.gov', false);
   const sbcId = await agency('state', 'RI State Building Code Commission', null, '(401) 889-5550', null, '560 Jefferson Blvd, Warwick, RI 02886', 'https://sbcc.ri.gov', false);
   const fmId = await agency('state', 'RI State Fire Marshal', 'Division of Fire Safety', '(401) 889-5551', null, '560 Jefferson Blvd, Warwick, RI 02886', 'https://firemarshal.ri.gov', false);
-  const e911Id = await agency('state', 'RI E 9-1-1 / Local Addressing Authority', null, null, null, null, 'https://www.cumberlandri.org', false);
+  const e911Id = await agency('state', 'RI E 9-1-1 / Local Addressing Authority', null, null, null, null, 'https://www.ri911.ri.gov', false);
 
   // Official sources. last_verified_at reflects when this seed data was curated;
   // the UI must instruct users to re-verify with the authority.
@@ -90,12 +90,12 @@ Inspections are required at prescribed construction milestones, concluding with 
     null);
 
   const sFire = await source(fmId,
-    'RI State Fire Marshal / Cumberland Fire District',
+    'RI State Fire Marshal',
     'Rhode Island Fire Safety Code — Plan Review',
     'https://firemarshal.ri.gov',
     'Fire and life-safety plan review for new residential buildings under the RI Fire Safety Code (RIGL 23-28.1 et seq.).',
     `New multi-unit residential buildings in Rhode Island are subject to the RI Fire Safety Code. Plan review is performed by the State Fire Marshal's office or the local assistant deputy fire marshal (fire district) depending on building type and size. Three-family and larger residential buildings typically require fire plan review and fire protection systems review (e.g., sprinkler and alarm plans) before a building permit is issued, plus inspections and sign-off before occupancy.
-Confirm the correct reviewing authority (Cumberland Fire District fire marshal vs. State Fire Marshal) for the specific building type with the Cumberland Fire District.`,
+Confirm the correct reviewing authority (local fire marshal vs. State Fire Marshal) for the specific building type with the fire authority having jurisdiction.`,
     null,
     null);
 
@@ -149,7 +149,7 @@ Confirm sewer availability for the specific parcel with DPW.`,
   const sE911 = await source(e911Id,
     'Local Addressing Authority / RI E 9-1-1',
     'Address Assignment for New Units',
-    'https://www.cumberlandri.org',
+    'https://www.ri911.ri.gov',
     'New dwelling units require official address assignment coordinated through the municipality.',
     `New residential units must receive official address assignments from the municipal addressing authority so emergency services and E 9-1-1 records are accurate. Coordinate with the Town during the permitting process.`,
     null,
