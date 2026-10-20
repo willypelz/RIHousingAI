@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { api } from '../api/client';
+import AppIcon from './AppIcon.vue';
 
 const props = defineProps<{ projectId: number }>();
 const items = ref<any[]>([]);
@@ -12,8 +13,8 @@ const grouped = computed(() => {
 });
 
 const TYPE_ICONS: Record<string, string> = {
-  form: '📄', document: '📎', plan: '📐', certification: '✍️', fee: '💲',
-  instruction: 'ℹ️', prerequisite: '🔗', referral: '↪️', hearing: '🏛️',
+  form: 'document', document: 'paperclip', plan: 'map', certification: 'pencil', fee: 'currency',
+  instruction: 'info', prerequisite: 'link', referral: 'arrow-right', hearing: 'scale',
 };
 
 async function load() { items.value = (await api.get(`/projects/${props.projectId}/checklist`)).items; }
@@ -31,8 +32,8 @@ onMounted(load);
     </div>
     <div v-for="(group, approval) in grouped" :key="approval" class="card">
       <div class="mb-3">
-        <h2 class="font-bold text-slate-900">{{ approval }}
-          <span class="ml-2 text-xs font-normal text-slate-400">{{ group.filter(i => i.status === 'complete').length }}/{{ group.length }} complete</span>
+        <h2 class="text-[1.05rem] font-bold text-slate-900">{{ approval }}
+          <span class="ml-2 text-xs font-normal text-slate-500">{{ group.filter(i => i.status === 'complete').length }}/{{ group.length }} complete</span>
         </h2>
         <div class="progress-track mt-2"><div class="progress-fill" :style="{ width: `${(group.filter(i => i.status === 'complete').length / group.length) * 100}%` }"></div></div>
       </div>
@@ -40,16 +41,16 @@ onMounted(load);
         <input type="checkbox" class="mt-1" :checked="item.status === 'complete'"
           @change="setStatus(item, ($event.target as HTMLInputElement).checked ? 'complete' : 'pending')" />
         <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium" :class="item.status === 'complete' ? 'text-slate-400 line-through' : 'text-slate-700'">
-            {{ TYPE_ICONS[item.item_type] }} {{ item.title }}
+          <p class="flex items-center gap-1.5 text-sm font-medium" :class="item.status === 'complete' ? 'text-slate-500 line-through' : 'text-slate-700'">
+            <AppIcon :name="TYPE_ICONS[item.item_type] || 'info'" :size="14" class="text-slate-500" /> {{ item.title }}
           </p>
           <p class="text-xs text-slate-500">{{ item.description }}</p>
-          <p class="mt-0.5 text-[11px] text-slate-400">
+          <p class="mt-0.5 text-[11px] text-slate-500">
             Responsible: {{ item.responsible_authority }}
-            <template v-if="item.source_url"> · <a :href="item.source_url" target="_blank" class="text-brand-600 hover:underline">source ↗</a> (verified {{ item.source_verified?.slice(0, 10) }})</template>
-            <template v-if="item.submission_link"> · <a :href="item.submission_link" target="_blank" class="text-brand-600 hover:underline">submit ↗</a></template>
+            <template v-if="item.source_url"> · <a :href="item.source_url" target="_blank" class="link">source ↗</a> (verified {{ item.source_verified?.slice(0, 10) }})</template>
+            <template v-if="item.submission_link"> · <a :href="item.submission_link" target="_blank" class="link">submit ↗</a></template>
           </p>
-          <p v-if="item.item_type === 'fee' && item.fee_note" class="text-[11px] text-amber-700">💲 {{ item.fee_note }}</p>
+          <p v-if="item.item_type === 'fee' && item.fee_note" class="text-[11px] text-amber-700">Fee: {{ item.fee_note }}</p>
         </div>
         <select class="ml-6 shrink-0 rounded border border-slate-200 p-1 text-[11px] sm:ml-0" :value="item.status"
           @change="setStatus(item, ($event.target as HTMLSelectElement).value)">

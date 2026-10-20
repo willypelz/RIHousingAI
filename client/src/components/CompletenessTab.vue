@@ -8,7 +8,7 @@ const busy = ref(false);
 const err = ref('');
 
 const SEVERITY: Record<string, string> = {
-  blocker: 'bg-red-100 text-red-800', warning: 'bg-amber-100 text-amber-800', info: 'bg-brand-100 text-brand-800',
+  blocker: 'bg-rose-100 text-rose-800', warning: 'bg-amber-100 text-amber-800', info: 'bg-brand-100 text-brand-800',
 };
 
 async function load() { checks.value = (await api.get(`/projects/${props.projectId}/completeness-checks`)).checks; }
@@ -29,12 +29,12 @@ onMounted(load);
   <div class="space-y-5">
     <div class="card flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="font-semibold text-slate-800">Application completeness check</h2>
+        <h2 class="text-[1.05rem] font-bold text-slate-900">Application completeness check</h2>
         <p class="text-xs text-slate-500">Compares your uploads against the official checklist and scans extracted document text. Each finding shows its supporting evidence.</p>
       </div>
       <button class="btn" :disabled="busy" @click="run">{{ busy ? 'Analyzing…' : 'Run check' }}</button>
     </div>
-    <p v-if="err" class="rounded bg-red-50 p-2 text-sm text-red-700">{{ err }}</p>
+    <p v-if="err" role="alert" class="rounded-lg bg-rose-50 p-2.5 text-sm text-rose-700">{{ err }}</p>
 
     <div v-for="check in checks" :key="check.id" class="card">
       <div class="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
@@ -52,7 +52,7 @@ onMounted(load);
           <span class="badge" :class="SEVERITY[f.severity]">{{ f.severity }}</span>
           <span class="badge bg-slate-100 text-slate-600">{{ f.finding_type.replace(/_/g, ' ') }}</span>
           <p class="text-sm font-medium text-slate-700">{{ f.title }}</p>
-          <button class="ml-auto text-xs text-brand-600 hover:underline" @click="resolve(f)">{{ f.resolved ? 'unresolve' : 'mark resolved' }}</button>
+          <button class="link ml-auto text-xs" @click="resolve(f)">{{ f.resolved ? 'unresolve' : 'mark resolved' }}</button>
         </div>
         <p class="mt-1 text-xs text-slate-600">{{ f.detail }}</p>
         <p v-if="f.evidence" class="mt-1 rounded bg-slate-50 p-2 text-xs italic text-slate-500">Evidence: {{ f.evidence }}</p>

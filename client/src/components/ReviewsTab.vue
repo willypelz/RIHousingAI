@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { api } from '../api/client';
+import AppIcon from './AppIcon.vue';
 
 const props = defineProps<{ projectId: number }>();
 const comments = ref<any[]>([]);
@@ -73,22 +74,22 @@ onMounted(load);
 
 <template>
   <div class="space-y-5">
-    <p v-if="err" class="rounded bg-red-50 p-2 text-sm text-red-700">{{ err }}</p>
+    <p v-if="err" role="alert" class="rounded-lg bg-rose-50 p-2.5 text-sm text-rose-700">{{ err }}</p>
 
     <!-- Tasks -->
     <div class="card">
-      <h2 class="mb-2 font-semibold text-slate-800">Tasks</h2>
-      <p v-if="!tasks.length" class="text-sm text-slate-400">No tasks.</p>
+      <h2 class="mb-3 text-[1.05rem] font-bold text-slate-900">Tasks</h2>
+      <p v-if="!tasks.length" class="text-sm text-slate-500">No tasks.</p>
       <div v-for="t in tasks" :key="t.id" class="flex items-center gap-2 border-b border-slate-100 py-2 text-sm last:border-0">
         <span class="badge" :class="t.waiting_on === 'agency' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800'">waiting on {{ t.waiting_on }}</span>
-        <span :class="t.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-700'">{{ t.title }}</span>
-        <button v-if="t.status === 'open'" class="ml-auto text-xs text-brand-600 hover:underline" @click="setTask(t.id, 'done')">mark done</button>
+        <span :class="t.status === 'done' ? 'text-slate-500 line-through' : 'text-slate-700'">{{ t.title }}</span>
+        <button v-if="t.status === 'open'" class="link ml-auto text-xs" @click="setTask(t.id, 'done')">mark done</button>
       </div>
     </div>
 
     <!-- Record agency feedback -->
     <div class="card">
-      <h2 class="mb-2 font-semibold text-slate-800">Record agency feedback</h2>
+      <h2 class="mb-3 text-[1.05rem] font-bold text-slate-900">Record agency feedback</h2>
       <div class="grid gap-3 sm:grid-cols-3">
         <select v-model="newComment.project_approval_id" class="input">
           <option value="" disabled>Select approval…</option>
@@ -107,15 +108,15 @@ onMounted(load);
 
     <!-- Comments -->
     <div class="card">
-      <h2 class="mb-2 font-semibold text-slate-800">Agency feedback & responses</h2>
-      <p v-if="!comments.length" class="text-sm text-slate-400">No feedback recorded.</p>
+      <h2 class="mb-3 text-[1.05rem] font-bold text-slate-900">Agency feedback & responses</h2>
+      <p v-if="!comments.length" class="text-sm text-slate-500">No feedback recorded.</p>
       <div v-for="c in comments" :key="c.id" class="border-b border-slate-100 py-3 last:border-0">
         <div class="flex flex-wrap items-center gap-2">
-          <span class="badge" :class="c.comment_type === 'rai' ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-600'">{{ c.comment_type }}</span>
+          <span class="badge" :class="c.comment_type === 'rai' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-600'">{{ c.comment_type }}</span>
           <span class="text-xs text-slate-500">{{ c.approval_name }}</span>
-          <span v-if="c.agency_name" class="text-xs text-slate-400">from {{ c.agency_name }}</span>
+          <span v-if="c.agency_name" class="text-xs text-slate-500">from {{ c.agency_name }}</span>
           <span class="badge" :class="c.status === 'resolved' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'">{{ c.status }}</span>
-          <button v-if="c.status !== 'resolved'" class="ml-auto text-xs text-brand-600 hover:underline" @click="setCommentStatus(c.id, 'resolved')">resolve</button>
+          <button v-if="c.status !== 'resolved'" class="link ml-auto text-xs" @click="setCommentStatus(c.id, 'resolved')">resolve</button>
         </div>
         <p class="mt-1 text-sm text-slate-700">{{ c.body }}</p>
         <div v-for="r in c.responses || []" :key="r.id" class="mt-2 rounded bg-slate-50 p-2 text-xs text-slate-600">
@@ -126,14 +127,14 @@ onMounted(load);
         <div v-if="c.status !== 'resolved'" class="mt-2 flex gap-2">
           <input v-model="responseDrafts[c.id]" class="input" placeholder="Draft a response…" />
           <button class="btn-secondary shrink-0" :disabled="!responseDrafts[c.id]" @click="respond(c.id)">Save draft</button>
-          <button class="btn-secondary shrink-0" :disabled="busyAi === c.id" @click="respond(c.id, true)">{{ busyAi === c.id ? 'Drafting…' : '✨ AI draft' }}</button>
+          <button class="btn-secondary shrink-0" :disabled="busyAi === c.id" @click="respond(c.id, true)"><AppIcon v-if="busyAi !== c.id" name="sparkles" :size="13" /> {{ busyAi === c.id ? 'Drafting…' : 'AI draft' }}</button>
         </div>
       </div>
     </div>
 
     <!-- Record decision -->
     <div class="card">
-      <h2 class="mb-2 font-semibold text-slate-800">Record official decision</h2>
+      <h2 class="mb-3 text-[1.05rem] font-bold text-slate-900">Record official decision</h2>
       <p class="mb-2 text-xs text-slate-500">Record decisions issued by the authority. The platform never determines outcomes itself.</p>
       <div class="grid gap-3 sm:grid-cols-2">
         <select v-model="newDecision.project_approval_id" class="input">
@@ -154,15 +155,15 @@ onMounted(load);
 
     <!-- Decisions -->
     <div v-if="decisions.length" class="card">
-      <h2 class="mb-2 font-semibold text-slate-800">Decisions & conditions</h2>
+      <h2 class="mb-3 text-[1.05rem] font-bold text-slate-900">Decisions & conditions</h2>
       <div v-for="d in decisions" :key="d.id" class="border-b border-slate-100 py-2 last:border-0">
         <p class="text-sm"><strong>{{ d.approval_name }}</strong>:
-          <span class="badge" :class="d.decision.startsWith('approved') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">{{ d.decision.replace(/_/g, ' ') }}</span>
+          <span class="badge" :class="d.decision.startsWith('approved') ? 'bg-green-100 text-green-800' : 'bg-rose-100 text-rose-800'">{{ d.decision.replace(/_/g, ' ') }}</span>
           by {{ d.decided_by }} on {{ d.decided_on?.slice(0, 10) }}</p>
         <div v-for="cond in d.conditions || []" :key="cond.id" class="ml-4 mt-1 flex items-center gap-2 text-xs text-slate-600">
           <span class="badge" :class="cond.status === 'satisfied' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'">{{ cond.status }}</span>
           {{ cond.description }}
-          <button v-if="cond.status === 'open'" class="text-brand-600 hover:underline" @click="setCondition(cond.id, 'satisfied')">mark satisfied</button>
+          <button v-if="cond.status === 'open'" class="link" @click="setCondition(cond.id, 'satisfied')">mark satisfied</button>
         </div>
       </div>
     </div>

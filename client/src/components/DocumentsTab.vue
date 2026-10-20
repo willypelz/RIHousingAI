@@ -47,7 +47,7 @@ onMounted(load);
 <template>
   <div class="space-y-5">
     <div class="card">
-      <h2 class="mb-3 font-semibold text-slate-800">Upload document</h2>
+      <h2 class="mb-4 text-[1.05rem] font-bold text-slate-900">Upload document</h2>
       <div class="grid gap-3 sm:grid-cols-2">
         <div><label class="label">File (pdf, docx, png, jpg, txt — 25MB max)</label>
           <input type="file" @change="onFile" class="input" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt" /></div>
@@ -63,13 +63,13 @@ onMounted(load);
             <option v-for="d in documents" :key="d.id" :value="d.id">{{ d.title }}</option>
           </select></div>
       </div>
-      <p v-if="err" class="mt-2 text-sm text-red-600">{{ err }}</p>
+      <p v-if="err" class="mt-2 text-sm text-rose-700">{{ err }}</p>
       <button class="btn mt-3" :disabled="!file || busy" @click="upload">{{ busy ? 'Uploading…' : 'Upload' }}</button>
     </div>
 
     <div class="card">
-      <h2 class="mb-3 font-semibold text-slate-800">Documents</h2>
-      <p v-if="!documents.length" class="text-sm text-slate-400">No documents uploaded yet.</p>
+      <h2 class="mb-4 text-[1.05rem] font-bold text-slate-900">Documents</h2>
+      <p v-if="!documents.length" class="text-sm text-slate-500">No documents uploaded yet.</p>
       <div v-for="d in documents" :key="d.id" class="border-b border-slate-100 py-3 last:border-0">
         <div class="flex flex-wrap items-center gap-2">
           <p class="text-sm font-medium text-slate-700">{{ d.title }}</p>
@@ -81,7 +81,7 @@ onMounted(load);
           <span>{{ v.original_name }}</span>
           <span>{{ (v.size_bytes / 1024).toFixed(0) }} KB</span>
           <span>{{ new Date(v.uploaded_at).toLocaleDateString() }} by {{ v.uploaded_by }}</span>
-          <button class="text-brand-600 hover:underline" @click="download(v)">download</button>
+          <button class="link" @click="download(v)">download</button>
         </div>
       </div>
     </div>
