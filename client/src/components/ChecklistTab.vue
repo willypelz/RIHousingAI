@@ -26,16 +26,25 @@ const TYPE_ICONS: Record<string, string> = {
   instruction: 'info', prerequisite: 'link', referral: 'arrow-right', hearing: 'scale',
 };
 
+const comments = ref<any[]>([]);
+const newFeedback = ref<Record<string, { type: string; body: string }>>({});
+const responseDrafts = ref<Record<number, string>>({});
+const busyAi = ref<number | null>(null);
+const feedbackBusy = ref<string | null>(null);
+
 async function load() {
-  const [cl, pw] = await Promise.all([
+  const [cl, pw, cm] = await Promise.all([
     api.get(`/projects/${props.projectId}/checklist`),
     api.get(`/projects/${props.projectId}/pathway`),
+    api.get(`/projects/${props.projectId}/comments`),
   ]);
   items.value = cl.items;
+  comments.value = cm.comments;
   // Per-approval contact + published timeline for group headers and the printout
   const map: Record<string, any> = {};
   for (const a of pw.approvals) {
     map[a.name] = {
+      pa_id: a.id,
       contact: [a.agency_name, a.agency_department].filter(Boolean).join(' — ') || 'Confirm with the town',
       phone: a.agency_phone, website: a.agency_website,
       estimate: a.processing_estimate,
@@ -45,8 +54,43 @@ async function load() {
   approvals.value = map;
 }
 
+function groupComments(approval: string) {
+  const paId = approvals.value[approval]?.pa_id;
+  return comments.value.filter(c => c.project_approval_id === paId);
+}
+
 async function setStatus(item: any, status: string) {
   await api.patch(`/projects/${props.projectId}/checklist/${item.id}`, { status });
+  await load();
+}
+
+async function addFeedback(approval: string) {
+  const f = newFeedback.value[approval];
+  const paId = approvals.value[approval]?.pa_id;
+  if (!f?.body || !paId) return;
+  feedbackBusy.value = approval; err.value = '';
+  try {
+    await api.post(`/projects/${props.projectId}/approvals/${paId}/comments`, { body: f.body, comment_type: f.type || 'comment' });
+    newFeedback.value[approval] = { type: 'comment', body: '' };
+    await load();
+  } catch (e: any) { err.value = e.message; }
+  finally { feedbackBusy.value = null; }
+}
+
+async function respond(commentId: number, useAi = false) {
+  err.value = '';
+  if (useAi) busyAi.value = commentId;
+  try {
+    await api.post(`/projects/${props.projectId}/comments/${commentId}/responses`,
+      useAi ? { use_ai: true } : { body: responseDrafts.value[commentId] });
+    responseDrafts.value[commentId] = '';
+    await load();
+  } catch (e: any) { err.value = e.message; }
+  finally { busyAi.value = null; }
+}
+
+async function resolveComment(id: number) {
+  await api.patch(`/projects/${props.projectId}/comments/${id}`, { status: 'resolved' });
   await load();
 }
 
@@ -153,6 +197,53 @@ onMounted(load);
           <option value="complete">complete</option><option value="not_applicable">n/a</option>
         </select>
       </div>
+
+      <!-- Reviews & feedback for this approval -->
+      <details class="group mt-3 border-t border-slate-100 pt-3">
+        <summary class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-700 marker:content-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+          <AppIcon name="arrow-right" :size="12" class="text-slate-400 transition-transform group-open:rotate-90" />
+          <AppIcon name="chat" :size="14" class="text-slate-400" /> Reviews & feedback
+          <span v-if="groupComments(approval).filter(c => c.status !== 'resolved').length"
+            class="badge bg-amber-100 text-amber-800">{{ groupComments(approval).filter(c => c.status !== 'resolved').length }} open</span>
+          <span v-else-if="groupComments(approval).length" class="badge bg-slate-100 text-slate-500">{{ groupComments(approval).length }}</span>
+        </summary>
+        <div class="mt-2 space-y-3 pl-5">
+          <p v-if="!groupComments(approval).length" class="hint">No feedback recorded for this approval yet.</p>
+          <div v-for="c in groupComments(approval)" :key="c.id" class="rounded-xl bg-slate-50/80 p-3 ring-1 ring-slate-200/70">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="badge" :class="c.comment_type === 'rai' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-600'">{{ c.comment_type }}</span>
+              <span v-if="c.agency_name" class="text-[11px] text-slate-500">from {{ c.agency_name }}</span>
+              <span class="badge" :class="c.status === 'resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'">{{ c.status }}</span>
+              <button v-if="c.status !== 'resolved'" class="link ml-auto text-xs" @click="resolveComment(c.id)">resolve</button>
+            </div>
+            <p class="mt-1 text-sm text-slate-700">{{ c.body }}</p>
+            <div v-for="r in c.responses || []" :key="r.id" class="mt-2 rounded-lg bg-white p-2 text-xs text-slate-600 ring-1 ring-slate-200/70">
+              <span class="badge bg-violet-100 text-violet-700">{{ r.is_draft ? 'DRAFT' : 'sent' }}</span>
+              <span v-if="r.ai_generated" class="badge ml-1 bg-brand-100 text-brand-700">AI-drafted — review before sending</span>
+              <p class="mt-1 whitespace-pre-wrap">{{ r.body }}</p>
+            </div>
+            <div v-if="c.status !== 'resolved'" class="mt-2 flex flex-wrap gap-2">
+              <input v-model="responseDrafts[c.id]" class="input min-w-40 flex-1 !py-1.5 text-xs" placeholder="Draft a response…"
+                @keydown.enter="responseDrafts[c.id] && respond(c.id)" />
+              <button class="btn-secondary shrink-0 !px-3 !py-1.5 text-xs" :disabled="!responseDrafts[c.id]" @click="respond(c.id)">Save draft</button>
+              <button class="btn-secondary shrink-0 !px-3 !py-1.5 text-xs" :disabled="busyAi === c.id" @click="respond(c.id, true)">
+                <AppIcon v-if="busyAi !== c.id" name="sparkles" :size="12" /> {{ busyAi === c.id ? 'Drafting…' : 'AI draft' }}
+              </button>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <select v-model="(newFeedback[approval] ??= { type: 'comment', body: '' }).type" class="input !w-auto !py-1.5 text-xs" :aria-label="`Feedback type for ${approval}`">
+              <option value="comment">Review comment</option>
+              <option value="rai">Request for info (RAI)</option>
+              <option value="condition_note">Condition note</option>
+            </select>
+            <input v-model="(newFeedback[approval] ??= { type: 'comment', body: '' }).body" class="input min-w-44 flex-1 !py-1.5 text-xs"
+              placeholder="Record agency feedback…" @keydown.enter="newFeedback[approval]?.body && addFeedback(approval)" />
+            <button class="btn shrink-0 !px-3 !py-1.5 text-xs" :disabled="!newFeedback[approval]?.body || feedbackBusy === approval"
+              @click="addFeedback(approval)">{{ feedbackBusy === approval ? 'Saving…' : 'Record' }}</button>
+          </div>
+        </div>
+      </details>
     </div>
   </div>
 </template>
