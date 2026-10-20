@@ -56,6 +56,42 @@ workflowRouter.patch('/:projectId/stages/:stageId', requireProjectAccess(), asyn
   res.json({ stage: updated });
 });
 
+/** Dated events for the timeline/calendar. Only real recorded dates are returned:
+ *  submissions, verified due dates (source-cited), decisions, scheduled inspections,
+ *  and task due dates. The platform never invents dates. */
+workflowRouter.get('/:projectId/timeline', requireProjectAccess(), async (req, res) => {
+  const projectId = Number(req.params.projectId);
+  const project = await getById('projects', projectId);
+  if (!project) return res.status(404).json({ error: 'Project not found' });
+
+  const pas = await where('project_approvals', 'project_id', projectId);
+  const types = indexBy(await all('approval_types'));
+  const approvalName = (paId: number) => {
+    const pa = pas.find(x => x.id === paId);
+    return pa ? types[pa.approval_type_id]?.name ?? null : null;
+  };
+
+  const events: any[] = [];
+  events.push({ date: String(project.created_at).slice(0, 10), type: 'created', title: 'Project registered', detail: project.name });
+
+  for (const s of await where('review_stages', 'project_id', projectId)) {
+    if (s.submitted_at) events.push({ date: String(s.submitted_at).slice(0, 10), type: 'submitted', title: `${s.name} submitted`, detail: approvalName(s.project_approval_id), status: s.status });
+    if (s.verified_due_date) events.push({ date: String(s.verified_due_date).slice(0, 10), type: 'due', title: `${s.name} due (verified)`, detail: approvalName(s.project_approval_id), status: s.status });
+  }
+  for (const d of await where('decisions', 'project_id', projectId)) {
+    events.push({ date: String(d.decided_on).slice(0, 10), type: 'decision', title: `Decision: ${String(d.decision).replace(/_/g, ' ')}`, detail: `${approvalName(d.project_approval_id) ?? ''} — ${d.decided_by}` });
+  }
+  for (const i of await where('inspections', 'project_id', projectId)) {
+    if (i.scheduled_for) events.push({ date: String(i.scheduled_for).slice(0, 10), type: 'inspection', title: `Inspection: ${i.name}`, detail: i.inspector_agency, status: i.result });
+  }
+  for (const t of await where('tasks', 'project_id', projectId)) {
+    if (t.verified_due_date && t.status === 'open') events.push({ date: String(t.verified_due_date).slice(0, 10), type: 'task', title: `Task due: ${t.title}`, detail: `Waiting on ${t.waiting_on}` });
+  }
+
+  events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  res.json({ events, today: new Date().toISOString().slice(0, 10) });
+});
+
 /** Progress & delay overview. Never labels anything overdue without a verified deadline. */
 workflowRouter.get('/:projectId/progress', requireProjectAccess(), async (req, res) => {
   const projectId = Number(req.params.projectId);
