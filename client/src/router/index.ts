@@ -10,6 +10,7 @@ export const router = createRouter({
     { path: '/projects/new', component: () => import('../views/NewProjectView.vue') },
     { path: '/projects/:id', component: () => import('../views/ProjectView.vue') },
     { path: '/sources', component: () => import('../views/SourcesView.vue') },
+    { path: '/help', component: () => import('../views/FaqView.vue') },
     { path: '/assistant', component: () => import('../views/AssistantView.vue') },
   ],
 });

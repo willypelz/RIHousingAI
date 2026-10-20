@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue';
+import { useRoute } from 'vue-router';
 import { api } from '../api/client';
 import { renderMarkdown } from '../lib/markdown';
 import AppIcon from '../components/AppIcon.vue';
@@ -21,9 +22,14 @@ const SUGGESTIONS = [
   'Which funding programs fit affordable housing?',
 ];
 
+const route = useRoute();
+
 onMounted(async () => {
   projects.value = (await api.get('/projects')).projects;
   if (projects.value.length) projectId.value = String(projects.value[0].id);
+  // Prefilled question handoff (e.g. from Help & FAQs)
+  const q = route.query.q;
+  if (typeof q === 'string' && q.trim()) send(q.trim());
 });
 
 async function send(text?: string) {

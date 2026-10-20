@@ -17,6 +17,7 @@ const NAV = [
   { to: '/', label: 'Projects', icon: 'building', match: (p: string) => p === '/' || p.startsWith('/projects') },
   { to: '/sources', label: 'Official Sources', icon: 'scale', match: (p: string) => p.startsWith('/sources') },
   { to: '/assistant', label: 'AI Assistant', icon: 'chat', match: (p: string) => p.startsWith('/assistant') },
+  { to: '/help', label: 'Help & FAQs', icon: 'info', match: (p: string) => p.startsWith('/help') },
 ];
 
 async function loadNotifs() {
