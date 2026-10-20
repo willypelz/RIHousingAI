@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { insert, where, all, getById, updateById, now, today, indexBy, sortBy } from '../db/firestore.js';
+import { insert, where, all, getById, updateById, deleteWhere, now, today, indexBy, sortBy } from '../db/firestore.js';
 import { requireAuth, requireProjectAccess } from '../middleware/auth.js';
 import { audit } from '../middleware/audit.js';
 import { evaluateApplicability, type ProjectFacts } from './applicability.js';
@@ -8,15 +8,9 @@ import { STAGE_TEMPLATES, STAGE_NAMES, CHECKLIST_TEMPLATES } from './pathwayTemp
 export const pathwaysRouter = Router();
 pathwaysRouter.use(requireAuth);
 
-/** Generate the approval pathway + checklist for a project from applicability rules. */
-pathwaysRouter.post('/:projectId/pathway/generate', requireProjectAccess(), async (req, res) => {
-  const projectId = Number(req.params.projectId);
-  const p = await getById('projects', projectId);
-  if (!p) return res.status(404).json({ error: 'Project not found' });
-
-  const existing = await where('project_approvals', 'project_id', projectId);
-  if (existing.length) return res.status(409).json({ error: 'Pathway already generated for this project' });
-
+/** Build (or rebuild) the approval pathway + checklist for a project from applicability rules. */
+export async function buildPathway(p: any): Promise<void> {
+  const projectId = p.id;
   const facts: ProjectFacts = {
     units: p.units, construction_kind: p.construction_kind,
     sewer_service: p.sewer_service, water_service: p.water_service,
@@ -115,8 +109,31 @@ pathwaysRouter.post('/:projectId/pathway/generate', requireProjectAccess(), asyn
   await addDep(resolve(BUILDING, 'submission'), resolve(PLANNING, 'decision'));
   await addDep(resolve(INSPECTIONS, 'inspections'), resolve(BUILDING, 'decision'));
   await addDep(resolve(FIRE, 'decision'), resolve(BUILDING, 'technical_review'));
+}
 
+pathwaysRouter.post('/:projectId/pathway/generate', requireProjectAccess(), async (req, res) => {
+  const projectId = Number(req.params.projectId);
+  const p = await getById('projects', projectId);
+  if (!p) return res.status(404).json({ error: 'Project not found' });
+  const existing = await where('project_approvals', 'project_id', projectId);
+  if (existing.length) return res.status(409).json({ error: 'Pathway already generated for this project' });
+  await buildPathway(p);
   await audit(req.user!.id, 'pathway.generate', 'project', projectId);
+  res.status(201).json({ ok: true });
+});
+
+/** Regenerate the pathway after zoning analysis / utility confirmation updates the project
+ *  facts. Rebuilds approvals, stages, and checklist from the current applicability rules.
+ *  Manual progress on the old pathway is replaced — intended for the pre-application phase. */
+pathwaysRouter.post('/:projectId/pathway/regenerate', requireProjectAccess(), async (req, res) => {
+  const projectId = Number(req.params.projectId);
+  const p = await getById('projects', projectId);
+  if (!p) return res.status(404).json({ error: 'Project not found' });
+  for (const c of ['project_approvals', 'review_stages', 'checklist_items']) {
+    await deleteWhere(c, 'project_id', projectId);
+  }
+  await buildPathway(p);
+  await audit(req.user!.id, 'pathway.regenerate', 'project', projectId);
   res.status(201).json({ ok: true });
 });
 
