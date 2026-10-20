@@ -21,6 +21,9 @@ const checkValues = ref<Record<string, string>>({});
 const sewer = ref('unknown');
 const water = ref('unknown');
 const regenerated = ref(false);
+const loadedSewer = ref('unknown');
+const loadedWater = ref('unknown');
+const confirmRebuild = ref(false);
 
 async function load() {
   const [z, s] = await Promise.all([
@@ -33,10 +36,19 @@ async function load() {
   districtFrom.value = z.district_confirmed_from ?? '';
   sewer.value = z.sewer_service ?? 'unknown';
   water.value = z.water_service ?? 'unknown';
+  loadedSewer.value = sewer.value;
+  loadedWater.value = water.value;
   for (const c of z.checks) checkValues.value[c.key] = c.value ?? '';
 }
 
+const utilitiesChanged = () => sewer.value !== loadedSewer.value || water.value !== loadedWater.value;
+/** Rebuilding the pathway replaces stage progress — ask before a change to already-known utilities. */
+const needsConfirm = () =>
+  utilitiesChanged() && (loadedSewer.value !== 'unknown' || loadedWater.value !== 'unknown');
+
 async function save() {
+  if (needsConfirm() && !confirmRebuild.value) { confirmRebuild.value = true; return; }
+  confirmRebuild.value = false;
   saving.value = true; err.value = ''; regenerated.value = false;
   try {
     const res = await api.patch(`/projects/${props.projectId}/zoning`, {
@@ -136,7 +148,18 @@ onMounted(load);
           </select></div>
         <div class="flex items-end"><button class="btn w-full" :disabled="saving" @click="save">{{ saving ? 'Saving…' : 'Save & build pathway' }}</button></div>
       </div>
-      <p v-if="regenerated" class="mt-3 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+      <div v-if="confirmRebuild" role="alertdialog" aria-labelledby="rebuild-title"
+        class="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5">
+        <AppIcon name="info" :size="15" class="shrink-0 text-amber-600" />
+        <p id="rebuild-title" class="min-w-0 flex-1 text-xs text-amber-900">
+          Changing utilities <strong>rebuilds the approval pathway</strong> — stage progress and checklist completion for this project will reset. Continue?
+        </p>
+        <div class="flex gap-2">
+          <button class="btn-secondary !px-3 !py-1.5 text-xs" @click="confirmRebuild = false">Cancel</button>
+          <button class="btn !bg-amber-600 !px-3 !py-1.5 text-xs hover:!bg-amber-500" @click="save">Rebuild pathway</button>
+        </div>
+      </div>
+      <p v-if="regenerated" class="mt-3 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700" role="status">
         <AppIcon name="check" :size="14" /> Pathway updated — see the Workflow tab.</p>
     </div>
 
