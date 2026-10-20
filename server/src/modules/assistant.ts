@@ -7,7 +7,7 @@ import { retrieveSources, formatSourcesForPrompt } from '../ai/retrieval.js';
 export const assistantRouter = Router();
 assistantRouter.use(requireAuth);
 
-const SYSTEM = `You are RIHousingAI's approval assistant. You help applicants navigate the ADMINISTRATIVE approval process for residential development in Rhode Island (currently focused on Cumberland).
+const SYSTEM = `You are RIHousingAI's approval assistant. You help applicants navigate the ADMINISTRATIVE approval process for residential development across Rhode Island's 39 municipalities. Verified local procedural detail varies by municipality (Cumberland has the deepest coverage); statewide frameworks (RIGL 45-23, the State Building Code, and the Fire Safety Code) apply everywhere. When local detail is not in the sources, say so and direct the user to the municipal offices.
 
 Strict rules:
 - Ground every answer ONLY in the provided [SOURCE n] excerpts and project context.

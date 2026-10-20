@@ -22,13 +22,30 @@ pathwaysRouter.post('/:projectId/pathway/generate', requireProjectAccess(), asyn
     sewer_service: p.sewer_service, water_service: p.water_service,
   };
 
-  const types = sortBy(await all('approval_types'), 'id');
+  // Select approval types dynamically for the project's municipality:
+  // - types bound to this municipality (verified local data)
+  // - statewide types (municipality_id null) whose functional slot is not
+  //   already covered by a local type; generic fallbacks are flagged unverified.
+  const municipality = await getById('municipalities', p.municipality_id);
+  const allTypes = sortBy(await all('approval_types'), 'id');
+  const localTypes = allTypes.filter(t => t.municipality_id === p.municipality_id);
+  const coveredSlots = new Set(localTypes.map(t => t.slot).filter(Boolean));
+  const types = [
+    ...localTypes,
+    ...allTypes.filter(t => t.municipality_id == null && (!t.slot || !coveredSlots.has(t.slot))),
+  ].sort((a, b) => a.id - b.id);
+
   const agencies = indexBy(await all('agencies'));
+  const unverifiedNote = `Local procedures for ${municipality?.name ?? 'this municipality'} are not yet verified on this platform — confirm requirements, forms, and fees directly with the municipal offices.`;
 
   const stageIds: Record<string, Record<string, number>> = {};
 
   for (const t of types) {
     const result = evaluateApplicability(t.applicability_rules, facts);
+    if (t.is_generic && result.applicability !== 'not_applicable') {
+      result.note = result.note ? `${unverifiedNote} ${result.note}` : unverifiedNote;
+      if (result.applicability === 'applicable') result.applicability = 'conditional';
+    }
     const pa = await insert('project_approvals', {
       project_id: projectId, approval_type_id: t.id,
       applicability: result.applicability, applicability_note: result.note,
@@ -37,8 +54,10 @@ pathwaysRouter.post('/:projectId/pathway/generate', requireProjectAccess(), asyn
     });
     if (result.applicability === 'not_applicable') continue;
 
-    const agency = agencies[t.agency_id] || {};
-    const authority = agency.department ? `${agency.name} — ${agency.department}` : agency.name;
+    const agency = (t.agency_id && agencies[t.agency_id]) || {};
+    const authority = agency.name
+      ? (agency.department ? `${agency.name} — ${agency.department}` : agency.name)
+      : `${municipality?.name ?? 'Municipal'} ${t.category === 'planning' ? 'Planning Department' : t.category === 'utility' ? 'utility authority' : 'authorities'} (confirm locally)`;
 
     // Review stages (sequential dependency chain within the approval)
     stageIds[t.code] = {};
@@ -77,18 +96,25 @@ pathwaysRouter.post('/:projectId/pathway/generate', requireProjectAccess(), asyn
     }
   }
 
-  // Cross-approval dependencies (official sequencing)
-  const addDep = async (fromCode: string, fromStage: string, toCode: string, toStage: string) => {
-    const from = stageIds[fromCode]?.[fromStage];
-    const to = stageIds[toCode]?.[toStage];
+  // Cross-approval dependencies (official sequencing). Codes resolve to either the
+  // municipality-specific type or its generic statewide fallback.
+  const resolve = (codes: string[], stage: string) => {
+    for (const c of codes) if (stageIds[c]?.[stage]) return stageIds[c][stage];
+    return undefined;
+  };
+  const addDep = async (from?: number, to?: number) => {
     if (from && to) {
       const stage = await getById('review_stages', from);
       await updateById('review_stages', from, { depends_on: [...new Set([...(stage?.depends_on || []), to])] });
     }
   };
-  await addDep('building_permit', 'submission', 'planning_major_land_dev', 'decision');
-  await addDep('inspections_co', 'inspections', 'building_permit', 'decision');
-  await addDep('fire_plan_review', 'decision', 'building_permit', 'technical_review');
+  const PLANNING = ['planning_major_land_dev', 'planning_generic'];
+  const BUILDING = ['building_permit', 'building_permit_generic'];
+  const FIRE = ['fire_plan_review', 'fire_generic'];
+  const INSPECTIONS = ['inspections_co', 'inspections_generic'];
+  await addDep(resolve(BUILDING, 'submission'), resolve(PLANNING, 'decision'));
+  await addDep(resolve(INSPECTIONS, 'inspections'), resolve(BUILDING, 'decision'));
+  await addDep(resolve(FIRE, 'decision'), resolve(BUILDING, 'technical_review'));
 
   await audit(req.user!.id, 'pathway.generate', 'project', projectId);
   res.status(201).json({ ok: true });
