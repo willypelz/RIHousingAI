@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db/pool.js';
+import { where, all, getById, updateById, indexBy } from '../db/firestore.js';
 import { requireAuth, requireProjectAccess } from '../middleware/auth.js';
 import { audit } from '../middleware/audit.js';
 
@@ -16,88 +16,100 @@ workflowRouter.patch('/:projectId/stages/:stageId', requireProjectAccess(), asyn
     return res.status(400).json({ error: 'A verified due date requires a due_date_source_id citing the official source that establishes it.' });
   }
 
-  // Block activating a stage whose dependencies are not complete
-  if (status === 'active' || status === 'complete') {
-    const unmet = await query(
-      `SELECT dep.name FROM stage_dependencies sd
-       JOIN review_stages dep ON dep.id = sd.depends_on_stage_id
-       WHERE sd.stage_id=$1 AND dep.status NOT IN ('complete','skipped')`, [req.params.stageId]);
-    if (status === 'complete' && unmet.rows.length) {
-      return res.status(409).json({ error: `Cannot complete: depends on incomplete stage(s): ${unmet.rows.map(r => r.name).join(', ')}` });
+  const projectId = Number(req.params.projectId);
+  const stage = await getById('review_stages', req.params.stageId);
+  if (!stage || stage.project_id !== projectId) return res.status(404).json({ error: 'Stage not found' });
+
+  // Block completing a stage whose dependencies are not complete
+  if (status === 'complete' && (stage.depends_on || []).length) {
+    const deps = await Promise.all(stage.depends_on.map((id: number) => getById('review_stages', id)));
+    const unmet = deps.filter(d => d && !['complete', 'skipped'].includes(d.status));
+    if (unmet.length) {
+      return res.status(409).json({ error: `Cannot complete: depends on incomplete stage(s): ${unmet.map(d => d!.name).join(', ')}` });
     }
   }
 
-  const sets: string[] = []; const vals: any[] = [];
-  const add = (col: string, v: any) => { vals.push(v); sets.push(`${col}=$${vals.length}`); };
-  if (status !== undefined) add('status', status);
-  if (submitted_at !== undefined) add('submitted_at', submitted_at);
-  if (verified_due_date !== undefined) { add('verified_due_date', verified_due_date); add('due_date_source_id', due_date_source_id ?? null); }
-  if (next_action !== undefined) add('next_action', next_action);
-  if (!sets.length) return res.status(400).json({ error: 'No fields to update' });
+  const updates: Record<string, any> = {};
+  if (status !== undefined) updates.status = status;
+  if (submitted_at !== undefined) updates.submitted_at = submitted_at;
+  if (verified_due_date !== undefined) { updates.verified_due_date = verified_due_date; updates.due_date_source_id = due_date_source_id ?? null; }
+  if (next_action !== undefined) updates.next_action = next_action;
+  if (!Object.keys(updates).length) return res.status(400).json({ error: 'No fields to update' });
 
-  vals.push(req.params.stageId, req.params.projectId);
-  const { rows } = await query(
-    `UPDATE review_stages rs SET ${sets.join(', ')}
-     FROM project_approvals pa
-     WHERE rs.id=$${vals.length - 1} AND pa.id=rs.project_approval_id AND pa.project_id=$${vals.length}
-     RETURNING rs.*`, vals);
-  if (!rows.length) return res.status(404).json({ error: 'Stage not found' });
+  const updated = await updateById('review_stages', stage.id, updates);
 
   // Auto-activate dependent stages whose dependencies are now all complete
   if (status === 'complete') {
-    await query(
-      `UPDATE review_stages SET status='active'
-       WHERE status='pending' AND id IN (
-         SELECT sd.stage_id FROM stage_dependencies sd WHERE sd.depends_on_stage_id=$1
-       ) AND NOT EXISTS (
-         SELECT 1 FROM stage_dependencies sd2 JOIN review_stages dep ON dep.id=sd2.depends_on_stage_id
-         WHERE sd2.stage_id = review_stages.id AND dep.status NOT IN ('complete','skipped')
-       )`, [req.params.stageId]);
+    const projectStages = await where('review_stages', 'project_id', projectId);
+    const byId = indexBy(projectStages);
+    for (const s of projectStages) {
+      if (s.status !== 'pending' || !(s.depends_on || []).includes(stage.id)) continue;
+      const allMet = (s.depends_on || []).every((id: number) => {
+        const dep = id === stage.id ? { ...byId[id], status: 'complete' } : byId[id];
+        return dep && ['complete', 'skipped'].includes(dep.status);
+      });
+      if (allMet) await updateById('review_stages', s.id, { status: 'active' });
+    }
   }
 
-  await audit(req.user!.id, 'stage.update', 'review_stage', req.params.stageId, req.body);
-  res.json({ stage: rows[0] });
+  await audit(req.user!.id, 'stage.update', 'review_stage', stage.id, req.body);
+  res.json({ stage: updated });
 });
 
 /** Progress & delay overview. Never labels anything overdue without a verified deadline. */
 workflowRouter.get('/:projectId/progress', requireProjectAccess(), async (req, res) => {
   const projectId = Number(req.params.projectId);
+  const todayStr = new Date().toISOString().slice(0, 10);
 
-  const approvals = (await query(
-    `SELECT pa.id, at.name, at.code, pa.applicability, pa.status, pa.submitted_at, pa.verified_due_date,
-            (SELECT count(*) FROM review_stages rs WHERE rs.project_approval_id=pa.id AND rs.status IN ('complete','skipped')) AS stages_done,
-            (SELECT count(*) FROM review_stages rs WHERE rs.project_approval_id=pa.id) AS stages_total,
-            (SELECT min(rs.submitted_at) FROM review_stages rs WHERE rs.project_approval_id=pa.id AND rs.submitted_at IS NOT NULL) AS first_submission,
-            s.processing_estimate
-     FROM project_approvals pa JOIN approval_types at ON at.id=pa.approval_type_id
-     LEFT JOIN official_sources s ON s.id = at.source_id
-     WHERE pa.project_id=$1 AND pa.applicability != 'not_applicable' ORDER BY at.id`, [projectId])).rows;
+  const pas = (await where('project_approvals', 'project_id', projectId)).filter(pa => pa.applicability !== 'not_applicable');
+  const types = indexBy(await all('approval_types'));
+  const sources = indexBy(await all('official_sources'));
+  const stages = await where('review_stages', 'project_id', projectId);
+  const checklistItems = await where('checklist_items', 'project_id', projectId);
+  const tasks = (await where('tasks', 'project_id', projectId)).filter(t => t.status === 'open');
 
-  const checklist = (await query(
-    `SELECT count(*) FILTER (WHERE ci.status='complete') AS done,
-            count(*) FILTER (WHERE ci.status NOT IN ('complete','not_applicable')) AS outstanding
-     FROM checklist_items ci JOIN project_approvals pa ON pa.id=ci.project_approval_id
-     WHERE pa.project_id=$1`, [projectId])).rows[0];
+  const approvals = pas.map(pa => {
+    const t = types[pa.approval_type_id] || {};
+    const s = sources[t.source_id] || {};
+    const paStages = stages.filter(st => st.project_approval_id === pa.id);
+    const submissions = paStages.map(st => st.submitted_at).filter(Boolean).sort();
+    return {
+      id: pa.id, name: t.name, code: t.code, applicability: pa.applicability, status: pa.status,
+      submitted_at: pa.submitted_at, verified_due_date: pa.verified_due_date,
+      stages_done: String(paStages.filter(st => ['complete', 'skipped'].includes(st.status)).length),
+      stages_total: String(paStages.length),
+      first_submission: submissions[0] ?? null,
+      processing_estimate: s.processing_estimate ?? null,
+      _order: pa.approval_type_id,
+    };
+  }).sort((a, b) => a._order - b._order);
 
-  const waiting = (await query(
-    `SELECT rs.id, rs.name, rs.status, rs.responsible_authority, rs.submitted_at,
-            at.name AS approval_name,
-            CASE WHEN rs.submitted_at IS NOT NULL THEN (CURRENT_DATE - rs.submitted_at) END AS days_elapsed,
-            rs.verified_due_date,
-            CASE WHEN rs.verified_due_date IS NOT NULL AND CURRENT_DATE > rs.verified_due_date THEN true ELSE false END AS past_verified_due_date
-     FROM review_stages rs
-     JOIN project_approvals pa ON pa.id=rs.project_approval_id
-     JOIN approval_types at ON at.id=pa.approval_type_id
-     WHERE pa.project_id=$1 AND rs.status IN ('active','waiting_on_agency','waiting_on_applicant')
-     ORDER BY rs.submitted_at NULLS LAST`, [projectId])).rows;
+  const checklist = {
+    done: String(checklistItems.filter(c => c.status === 'complete').length),
+    outstanding: String(checklistItems.filter(c => !['complete', 'not_applicable'].includes(c.status)).length),
+  };
 
-  const tasks = (await query(
-    `SELECT * FROM tasks WHERE project_id=$1 AND status='open' ORDER BY created_at`, [projectId])).rows;
+  const daysBetween = (from: string, to: string) =>
+    Math.floor((new Date(to).getTime() - new Date(from).getTime()) / 86400000);
 
-  // Bottleneck hints: stages waiting on agency with elapsed time, or blocking many dependents
+  const waiting = stages
+    .filter(s => ['active', 'waiting_on_agency', 'waiting_on_applicant'].includes(s.status))
+    .map(s => {
+      const pa = pas.find(x => x.id === s.project_approval_id);
+      const t = pa ? types[pa.approval_type_id] : null;
+      return {
+        id: s.id, name: s.name, status: s.status, responsible_authority: s.responsible_authority,
+        submitted_at: s.submitted_at, approval_name: t?.name ?? null,
+        days_elapsed: s.submitted_at ? daysBetween(s.submitted_at, todayStr) : null,
+        verified_due_date: s.verified_due_date,
+        past_verified_due_date: !!(s.verified_due_date && todayStr > s.verified_due_date),
+      };
+    })
+    .sort((a, b) => (a.submitted_at ?? '9999') < (b.submitted_at ?? '9999') ? -1 : 1);
+
   const bottlenecks = waiting
-    .filter((w: any) => w.status === 'waiting_on_agency')
-    .map((w: any) => ({
+    .filter(w => w.status === 'waiting_on_agency')
+    .map(w => ({
       stage: w.name, approval: w.approval_name, days_elapsed: w.days_elapsed,
       recommendation: w.past_verified_due_date
         ? 'The verified review deadline has passed — follow up with the responsible authority.'
