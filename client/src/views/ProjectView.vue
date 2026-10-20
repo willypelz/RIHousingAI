@@ -7,6 +7,7 @@ import ChecklistTab from '../components/ChecklistTab.vue';
 import DocumentsTab from '../components/DocumentsTab.vue';
 import ReviewsTab from '../components/ReviewsTab.vue';
 import CompletenessTab from '../components/CompletenessTab.vue';
+import ZoningTab from '../components/ZoningTab.vue';
 
 const route = useRoute();
 const projectId = Number(route.params.id);
@@ -15,6 +16,7 @@ const tab = ref('workflow');
 
 const tabs = computed(() => [
   { id: 'workflow', label: 'Workflow' },
+  { id: 'zoning', label: 'Zoning' },
   { id: 'checklist', label: 'Checklist' },
   { id: 'documents', label: 'Documents' },
   { id: 'completeness', label: 'Completeness Check' },
@@ -62,6 +64,7 @@ function downloadReport() {
     </div>
 
     <WorkflowTab v-if="tab === 'workflow'" :project-id="projectId" />
+    <ZoningTab v-else-if="tab === 'zoning'" :project-id="projectId" />
     <ChecklistTab v-else-if="tab === 'checklist'" :project-id="projectId" />
     <DocumentsTab v-else-if="tab === 'documents'" :project-id="projectId" />
     <CompletenessTab v-else-if="tab === 'completeness'" :project-id="projectId" />
