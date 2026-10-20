@@ -7,6 +7,9 @@ import { audit } from '../middleware/audit.js';
 export const projectsRouter = Router();
 projectsRouter.use(requireAuth);
 
+// Minimal creation schema: only what's needed to identify the project and its
+// applicability facts. Everything else (applicant/representative details, utilities,
+// status) defaults sensibly and is refined later via the zoning analysis panel.
 const projectSchema = z.object({
   name: z.string().min(1),
   address: z.string().min(1),
@@ -15,7 +18,7 @@ const projectSchema = z.object({
   units: z.number().int().positive(),
   construction_kind: z.enum(['new_construction','conversion','addition']),
   description: z.string().optional().nullable(),
-  applicant_name: z.string().min(1),
+  applicant_name: z.string().min(1).optional(),
   applicant_email: z.string().email().optional().nullable(),
   applicant_phone: z.string().optional().nullable(),
   representative_name: z.string().optional().nullable(),
@@ -53,8 +56,9 @@ projectsRouter.post('/', async (req, res) => {
   const d = parsed.data;
   const project = await insert('projects', {
     ...d,
+    applicant_name: d.applicant_name || req.user!.name,
     description: d.description ?? null,
-    applicant_email: d.applicant_email ?? null,
+    applicant_email: d.applicant_email ?? req.user!.email ?? null,
     applicant_phone: d.applicant_phone ?? null,
     representative_name: d.representative_name ?? null,
     representative_email: d.representative_email ?? null,
