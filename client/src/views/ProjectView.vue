@@ -8,6 +8,7 @@ import DocumentsTab from '../components/DocumentsTab.vue';
 import ReviewsTab from '../components/ReviewsTab.vue';
 import CompletenessTab from '../components/CompletenessTab.vue';
 import ZoningTab from '../components/ZoningTab.vue';
+import FundingTab from '../components/FundingTab.vue';
 import AppIcon from '../components/AppIcon.vue';
 
 const route = useRoute();
@@ -23,6 +24,7 @@ const tabs = computed(() => [
   { id: 'zoning', label: '1 · Zoning', badge: utilitiesUnknown.value ? 'Start here' : null },
   { id: 'workflow', label: '2 · Workflow' },
   { id: 'checklist', label: '3 · Checklist' },
+  { id: 'funding', label: 'Funding' },
   { id: 'documents', label: 'Documents' },
   { id: 'completeness', label: 'Completeness' },
   { id: 'reviews', label: 'Reviews' },
@@ -100,6 +102,7 @@ function downloadReport() {
     </template>
     <ZoningTab v-else-if="tab === 'zoning'" :project-id="projectId" @updated="reloadProject" />
     <ChecklistTab v-else-if="tab === 'checklist'" :project-id="projectId" />
+    <FundingTab v-else-if="tab === 'funding'" :project-id="projectId" />
     <DocumentsTab v-else-if="tab === 'documents'" :project-id="projectId" />
     <CompletenessTab v-else-if="tab === 'completeness'" :project-id="projectId" />
     <ReviewsTab v-else-if="tab === 'reviews'" :project-id="projectId" />
