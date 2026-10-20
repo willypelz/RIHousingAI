@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { api } from '../api/client';
 import { renderMarkdown } from '../lib/markdown';
+import AppIcon from './AppIcon.vue';
 
 const route = useRoute();
 const open = ref(false);
@@ -15,10 +16,10 @@ const scroller = ref<HTMLElement | null>(null);
 const projectName = ref('');
 
 const SUGGESTIONS = [
+  'How do I find the zoning district for my lot?',
   'What do I need to submit for my project?',
-  'Which department receives my application?',
-  'What happens after submission?',
-  'Which approvals remain before construction?',
+  'Could the ADU reforms add units to my lot?',
+  'What funding programs fit affordable housing?',
 ];
 
 // Auto-detect project context from the current route
@@ -68,21 +69,21 @@ function reset() { conversationId.value = null; messages.value = []; lastSources
   <div>
     <!-- Floating action button -->
     <button v-if="!open" @click="open = true"
-      class="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-cyan-600 text-2xl text-white shadow-lift transition-all duration-200 hover:scale-105 hover:shadow-xl"
-      aria-label="Open AI assistant">🤖</button>
+      class="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-700 text-white shadow-lift transition-all duration-200 hover:bg-brand-600 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+      aria-label="Open AI assistant"><AppIcon name="chat" :size="24" /></button>
 
     <!-- Chat panel -->
     <div v-if="open"
       class="fixed inset-0 z-40 flex flex-col overflow-hidden bg-white shadow-2xl sm:inset-auto sm:bottom-5 sm:right-5 sm:h-[600px] sm:max-h-[80vh] sm:w-[400px] sm:animate-fade-up sm:rounded-2xl sm:border sm:border-slate-200">
       <!-- Header -->
-      <div class="flex items-center gap-2 bg-gradient-to-r from-brand-900 to-brand-700 px-4 py-3 text-white">
-        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-sm">🤖</span>
+      <div class="flex items-center gap-2 bg-brand-900 px-4 py-3 text-white">
+        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white/15"><AppIcon name="sparkles" :size="16" /></span>
         <div class="min-w-0 flex-1">
           <p class="text-sm font-bold">AI Approval Assistant</p>
           <p class="truncate text-[11px] text-brand-200">{{ projectName ? `Context: ${projectName}` : 'General — open a project for project-specific answers' }}</p>
         </div>
-        <button @click="reset" class="rounded-lg px-2 py-1 text-xs text-brand-100 hover:bg-white/10" title="New chat">↺</button>
-        <button @click="open = false" class="rounded-lg px-2 py-1 text-brand-100 hover:bg-white/10" aria-label="Close">✕</button>
+        <button @click="reset" class="rounded-lg p-1.5 text-brand-100 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300" aria-label="New chat" title="New chat"><AppIcon name="refresh" :size="14" /></button>
+        <button @click="open = false" class="rounded-lg p-1.5 text-brand-100 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300" aria-label="Close assistant"><AppIcon name="x" :size="16" /></button>
       </div>
 
       <!-- Messages -->
@@ -96,7 +97,7 @@ function reset() { conversationId.value = null; messages.value = []; lastSources
           </div>
         </div>
         <div v-for="(m, i) in messages" :key="i" class="flex animate-fade-up items-end gap-1.5" :class="m.role === 'user' ? 'flex-row-reverse' : ''">
-          <div v-if="m.role === 'user'" class="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-gradient-to-b from-brand-600 to-brand-700 px-3 py-2 text-left text-xs text-white shadow-soft">{{ m.content }}</div>
+          <div v-if="m.role === 'user'" class="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-brand-700 px-3 py-2 text-left text-xs text-white shadow-soft">{{ m.content }}</div>
           <div v-else class="max-w-[85%] space-y-0.5 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3 py-2 text-left text-xs leading-relaxed text-slate-800 shadow-soft" v-html="renderMarkdown(m.content)"></div>
         </div>
         <div v-if="busy" class="flex gap-1 rounded-2xl rounded-bl-md border border-slate-200 bg-white px-3 py-2.5 shadow-soft" style="width: fit-content">

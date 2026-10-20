@@ -29,16 +29,16 @@ async function submit() {
     <h1 class="mb-1 text-center text-2xl font-bold text-slate-900">Create your account</h1>
     <p class="mb-6 text-center text-sm text-slate-500">Start navigating your approval process</p>
     <form class="card space-y-4 !p-6" @submit.prevent="submit">
-      <div><label class="label">Full name</label><input v-model="form.name" required class="input" /></div>
-      <div><label class="label">Email</label><input v-model="form.email" type="email" required class="input" /></div>
-      <div><label class="label">Password (min 8 chars)</label><input v-model="form.password" type="password" minlength="8" required class="input" /></div>
-      <div><label class="label">Role</label>
-        <select v-model="form.role" class="input"><option v-for="r in roles" :key="r.value" :value="r.value">{{ r.label }}</option></select>
-        <p class="mt-1 text-xs text-slate-400">Municipal staff accounts are provisioned by administrators.</p>
+      <div><label class="label" for="reg-name">Full name</label><input id="reg-name" v-model="form.name" autocomplete="name" required class="input" /></div>
+      <div><label class="label" for="reg-email">Email</label><input id="reg-email" v-model="form.email" type="email" autocomplete="email" required class="input" /></div>
+      <div><label class="label" for="reg-password">Password (min 8 chars)</label><input id="reg-password" v-model="form.password" type="password" autocomplete="new-password" minlength="8" required class="input" /></div>
+      <div><label class="label" for="reg-role">Role</label>
+        <select id="reg-role" v-model="form.role" class="input"><option v-for="r in roles" :key="r.value" :value="r.value">{{ r.label }}</option></select>
+        <p class="hint mt-1">Municipal staff accounts are provisioned by administrators.</p>
       </div>
-      <p v-if="error" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ error }}</p>
+      <p v-if="error" role="alert" class="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{{ error }}</p>
       <button class="btn w-full" :disabled="busy">{{ busy ? 'Creating account…' : 'Register' }}</button>
-      <p class="text-center text-sm text-slate-500">Have an account? <router-link to="/login" class="font-semibold text-brand-600 hover:underline">Sign in</router-link></p>
+      <p class="text-center text-sm text-slate-500">Have an account? <router-link to="/login" class="link">Sign in</router-link></p>
     </form>
     </div>
   </div>

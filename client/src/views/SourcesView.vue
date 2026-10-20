@@ -13,7 +13,7 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6">
-    <h1 class="text-xl font-bold text-slate-800">Official Sources & Agencies</h1>
+    <h1 class="page-title">Official Sources & Agencies</h1>
     <p class="text-sm text-slate-500">
       Verified procedural sources used to generate checklists and assistant answers. Always re-verify requirements, fees, and dates directly with the authority before relying on them.
     </p>
@@ -28,9 +28,9 @@ onMounted(async () => {
             <span v-if="a.municipality_name"> · {{ a.municipality_name }}</span>
           </p>
           <p class="mt-1 text-xs text-slate-500">
-            <span v-if="a.phone">📞 {{ a.phone }} · </span>
+            <span v-if="a.phone">{{ a.phone }} · </span>
             <span v-if="a.address">{{ a.address }} · </span>
-            <a v-if="a.website" :href="a.website" target="_blank" class="text-brand-600 hover:underline">website ↗</a>
+            <a v-if="a.website" :href="a.website" target="_blank" class="link">website ↗</a>
           </p>
         </div>
       </div>
@@ -43,14 +43,14 @@ onMounted(async () => {
       </div>
       <p class="text-xs text-slate-500">{{ s.authority }}</p>
       <p class="mt-1 text-sm text-slate-600">{{ s.summary }}</p>
-      <p class="mt-2 text-xs text-slate-400">
-        <a :href="s.url" target="_blank" class="text-brand-600 hover:underline">{{ s.url }} ↗</a>
+      <p class="mt-2 text-xs text-slate-500">
+        <a :href="s.url" target="_blank" class="link">{{ s.url }} ↗</a>
         · Version: {{ s.doc_version || 'n/a' }}
         · Last verified: {{ s.last_verified_at?.slice(0, 10) || 'unverified' }}
       </p>
-      <p v-if="s.fees_note" class="mt-1 text-xs text-amber-700">💲 {{ s.fees_note }}</p>
-      <p v-if="s.processing_estimate" class="mt-1 text-xs text-slate-500">📋 Published processing estimate: {{ s.processing_estimate }}</p>
-      <div v-if="s.change_history?.length" class="mt-2 text-xs text-slate-400">
+      <p v-if="s.fees_note" class="mt-1 text-xs text-amber-700">Fees: {{ s.fees_note }}</p>
+      <p v-if="s.processing_estimate" class="mt-1 text-xs text-slate-500">Published processing estimate: {{ s.processing_estimate }}</p>
+      <div v-if="s.change_history?.length" class="mt-2 text-xs text-slate-500">
         <p class="font-semibold">Change history:</p>
         <p v-for="(ch, i) in s.change_history" :key="i">{{ new Date(ch.changed_at).toLocaleDateString() }} — {{ ch.change_note }}</p>
       </div>

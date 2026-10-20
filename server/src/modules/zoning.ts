@@ -11,7 +11,7 @@ import {
 export const zoningRouter = Router();
 zoningRouter.use(requireAuth);
 
-const DISCLAIMER = 'This panel helps you find and record zoning information from official sources. It is not a zoning determination — the legal answer for a parcel comes from the town\u2019s official zoning map and ordinance, or a zoning certificate from the town (issued within 20 days of a written request under RIGL 45-24-54).';
+const DISCLAIMER = 'Not a zoning determination — confirm with the town\u2019s official map, or request a zoning certificate (20-day answer, RIGL 45-24-54).';
 
 /** Zoning panel: ordinance link for the project's town, map tools to find the district,
  *  dimensional blanks the user fills from the ordinance, and relevant state reforms. */
@@ -35,7 +35,7 @@ zoningRouter.get('/:projectId/zoning', requireProjectAccess(), async (req, res) 
     municipality: municipality?.name ?? null,
     ordinance: ordinance ? {
       ...ordinance,
-      note: `The zoning ordinance for ${municipality.name} is on ${ordinance.platform}${ordinance.where ? ` (${ordinance.where})` : ''}. Open the use table and dimensional table for your district.`,
+      note: `${ordinance.platform}${ordinance.where ? ` — ${ordinance.where}` : ''}`,
     } : null,
     map_tools: MAP_TOOLS,
     district: saved.district ?? null,
@@ -47,7 +47,7 @@ zoningRouter.get('/:projectId/zoning', requireProjectAccess(), async (req, res) 
       value: saved.checks?.[c.key] ?? null,
       lookup_url: ordinance?.url ?? null,
     })),
-    reforms: { items: reforms, source: REFORMS_SOURCE, note: 'Rhode Island\u2019s 2024\u20132026 housing reforms may allow more than the local ordinance text shows, because hosted codes can lag state law. Confirm the current statute before relying on any entry.' },
+    reforms: { items: reforms, source: REFORMS_SOURCE, note: 'State law may allow more than the local code shows. Confirm current statute text.' },
     languages: SUPPORTED_LANGUAGES,
   });
 });

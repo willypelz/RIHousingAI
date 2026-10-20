@@ -52,21 +52,21 @@ export const ORDINANCE_LINKS: Record<string, OrdinanceLink> = {
 
 /** Statewide map tools to find a parcel's district (the legal answer is the town's official map). */
 export const MAP_TOOLS = [
-  { name: 'Rhode Island Zoning Atlas (all 39 towns on one map)', url: 'https://experience.arcgis.com/experience/e9b8450970b643ee9dd71188ce59e766/', note: 'Shows each district and whether 1/2/3/4+ unit housing is allowed by right or by hearing. Use it to find the district, then confirm in the ordinance.' },
-  { name: 'RIGIS Zoning and Overlay Zones layer', url: 'https://www.rigis.org/maps/c8d4094c9141466eb6d3e9d82c349dd8', note: 'Every town\u2019s districts and overlays in one statewide GIS layer (generalized for planning).' },
-  { name: 'Municipal GIS resources (official town maps)', url: 'https://www.rigis.org/pages/municipal-gis-resources', note: 'Per-town links to official online maps and PDF zoning maps \u2014 the best source for the legal district boundary.' },
+  { name: 'RI Zoning Atlas', url: 'https://experience.arcgis.com/experience/e9b8450970b643ee9dd71188ce59e766/', note: 'All 39 towns; shows units allowed by right or hearing.' },
+  { name: 'RIGIS zoning layer', url: 'https://www.rigis.org/maps/c8d4094c9141466eb6d3e9d82c349dd8', note: 'Statewide districts and overlays.' },
+  { name: 'Official town maps', url: 'https://www.rigis.org/pages/municipal-gis-resources', note: 'The legal district boundary.' },
 ];
 
 /** Dimensional items to check in the ordinance's use + dimensional tables. Values are
  *  intentionally blank — they must be read from the town's ordinance for the district. */
 export const DIMENSIONAL_CHECKS = [
-  { key: 'min_lot_size', label: 'Minimum lot size', hint: 'Dimensional table for your district (sq ft or acres).' },
-  { key: 'frontage', label: 'Minimum frontage', hint: 'Dimensional table; some districts also set lot width.' },
-  { key: 'setbacks', label: 'Setbacks (front / side / rear)', hint: 'Dimensional table; corner lots often differ.' },
-  { key: 'height_limit', label: 'Height limit', hint: 'Dimensional table (feet and/or stories).' },
-  { key: 'units_by_right', label: 'Units allowed by right', hint: 'Use table for your district; the RI Zoning Atlas summarizes 1/2/3/4+ unit allowances.' },
-  { key: 'lot_coverage', label: 'Maximum lot coverage', hint: 'Dimensional table (% of lot).' },
-  { key: 'parking', label: 'Off-street parking required', hint: 'Parking section; note the 2026 transit parking cap (RIGL 45-24-33).' },
+  { key: 'min_lot_size', label: 'Minimum lot size', hint: 'Dimensional table' },
+  { key: 'frontage', label: 'Minimum frontage', hint: 'Dimensional table' },
+  { key: 'setbacks', label: 'Setbacks (front/side/rear)', hint: 'Dimensional table' },
+  { key: 'height_limit', label: 'Height limit', hint: 'Feet / stories' },
+  { key: 'units_by_right', label: 'Units allowed by right', hint: 'Use table / Zoning Atlas' },
+  { key: 'lot_coverage', label: 'Max lot coverage', hint: '% of lot' },
+  { key: 'parking', label: 'Parking required', hint: '2026 transit cap may apply' },
 ];
 
 export interface StateReform {
