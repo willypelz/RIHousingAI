@@ -6,10 +6,20 @@ export interface SourceDoc {
   last_verified_at: string | null;
 }
 
-/** Simple keyword retrieval over official_sources (sufficient for the curated corpus). */
-export async function retrieveSources(queryText: string, limit = 5): Promise<SourceDoc[]> {
+/** Simple keyword retrieval over official_sources (sufficient for the curated corpus).
+ *  When municipalityId is given, another municipality's local sources are excluded so a
+ *  Warwick project never gets grounded in Cumberland-specific procedures. */
+export async function retrieveSources(queryText: string, limit = 5, municipalityId?: number | null): Promise<SourceDoc[]> {
   const terms = queryText.toLowerCase().split(/\W+/).filter(t => t.length > 3);
-  const rows = await all<SourceDoc>('official_sources');
+  let rows = await all<SourceDoc & { agency_id?: number | null }>('official_sources');
+  if (municipalityId != null) {
+    const agencies = await all<{ id: number; municipality_id: number | null }>('agencies');
+    const agencyMuni = new Map(agencies.map(a => [a.id, a.municipality_id]));
+    rows = rows.filter(s => {
+      const muni = s.agency_id ? agencyMuni.get(s.agency_id) ?? null : null;
+      return muni == null || muni === municipalityId; // statewide or this municipality
+    });
+  }
   const scored = rows.map(s => {
     const hay = `${s.title} ${s.summary ?? ''} ${s.content ?? ''}`.toLowerCase();
     const score = terms.reduce((acc, t) => acc + (hay.includes(t) ? 1 : 0), 0);

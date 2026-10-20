@@ -7,7 +7,7 @@ import { retrieveSources, formatSourcesForPrompt } from '../ai/retrieval.js';
 export const assistantRouter = Router();
 assistantRouter.use(requireAuth);
 
-const SYSTEM = `You are RIHousingAI's approval assistant. You help applicants navigate the ADMINISTRATIVE approval process for residential development across Rhode Island's 39 municipalities. Verified local procedural detail varies by municipality (Cumberland has the deepest coverage); statewide frameworks (RIGL 45-23, the State Building Code, and the Fire Safety Code) apply everywhere. When local detail is not in the sources, say so and direct the user to the municipal offices.
+const SYSTEM = `You are RIHousingAI's approval assistant. You help applicants navigate the ADMINISTRATIVE approval process for residential development across all 39 Rhode Island municipalities. Statewide frameworks (RIGL 45-23, the State Building Code, and the Fire Safety Code) apply everywhere; verified local procedural detail varies by municipality. When local detail for the project's municipality is not in the sources, say so plainly and direct the user to that municipality's planning and building offices — never substitute another town's procedures.
 
 Strict rules:
 - Ground every answer ONLY in the provided [SOURCE n] excerpts and project context.
@@ -76,7 +76,13 @@ assistantRouter.post('/chat', async (req, res) => {
 
   await insert('assistant_messages', { conversation_id: convId, role: 'user', content: message, cited_source_ids: [], created_at: now() });
 
-  const sources = await retrieveSources(message, 5);
+  // Scope retrieval to the project's municipality (+ statewide sources)
+  let municipalityId: number | null = null;
+  if (project_id) {
+    const proj = await getById('projects', Number(project_id));
+    municipalityId = proj?.municipality_id ?? null;
+  }
+  const sources = await retrieveSources(message, 5, municipalityId);
   const projectContext = project_id ? await buildProjectContext(Number(project_id)) : '';
 
   let answer: string;
