@@ -15,6 +15,7 @@ import { notificationsRouter, tasksRouter } from './modules/notifications.js';
 import { completenessRouter } from './modules/completeness.js';
 import { assistantRouter } from './modules/assistant.js';
 import { reportsRouter } from './modules/reports.js';
+import { zoningRouter } from './modules/zoning.js';
 
 export function createApp() {
   const app = express();
@@ -32,6 +33,7 @@ export function createApp() {
   app.use('/api/projects', tasksRouter);
   app.use('/api/projects', completenessRouter);
   app.use('/api/projects', reportsRouter);
+  app.use('/api/projects', zoningRouter);
   app.use('/api/sources', sourcesRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/assistant', assistantRouter);
