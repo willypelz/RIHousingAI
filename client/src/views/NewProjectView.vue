@@ -45,7 +45,7 @@ async function submit() {
         <div><label class="label">Street address</label><input v-model="form.address" required class="input" /></div>
         <div><label class="label">Municipality</label>
           <select v-model="form.municipality_id" class="input">
-            <option v-for="m in municipalities" :key="m.id" :value="m.id">{{ m.name }}{{ m.coverage_status !== 'planned' ? '' : ' (procedural data coming soon)' }}</option>
+            <option v-for="m in municipalities" :key="m.id" :value="m.id">{{ m.name }}{{ m.coverage_status !== 'planned' ? ' (verified local data)' : '' }}</option>
           </select>
         </div>
         <div><label class="label">Development type</label>

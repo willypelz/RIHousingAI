@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db/pool.js';
+import { insert, where, all, getById, updateById, now, today, indexBy, sortBy } from '../db/firestore.js';
 import { requireAuth, requireProjectAccess } from '../middleware/auth.js';
 import { audit } from '../middleware/audit.js';
 import { getProvider, aiAvailable } from '../ai/provider.js';
@@ -7,59 +7,77 @@ import { getProvider, aiAvailable } from '../ai/provider.js';
 export const reviewsRouter = Router();
 reviewsRouter.use(requireAuth);
 
+async function paInProject(paId: string | number, projectId: number) {
+  const pa = await getById('project_approvals', paId);
+  return pa && pa.project_id === projectId ? pa : null;
+}
+
 /** Record agency feedback (comment / RAI). */
 reviewsRouter.post('/:projectId/approvals/:paId/comments', requireProjectAccess(), async (req, res) => {
   const { body, comment_type = 'comment', agency_name, stage_id } = req.body || {};
   if (!body) return res.status(400).json({ error: 'Comment body required' });
-  const pa = await query(`SELECT id FROM project_approvals WHERE id=$1 AND project_id=$2`, [req.params.paId, req.params.projectId]);
-  if (!pa.rows.length) return res.status(404).json({ error: 'Approval not found' });
-  const { rows } = await query(
-    `INSERT INTO review_comments (project_approval_id, stage_id, author_user_id, agency_name, comment_type, body)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-    [req.params.paId, stage_id || null, req.user!.id, agency_name || null, comment_type, body]);
+  const projectId = Number(req.params.projectId);
+  const pa = await paInProject(req.params.paId, projectId);
+  if (!pa) return res.status(404).json({ error: 'Approval not found' });
+
+  const comment = await insert('review_comments', {
+    project_approval_id: pa.id, project_id: projectId, stage_id: stage_id ? Number(stage_id) : null,
+    author_user_id: req.user!.id, agency_name: agency_name || null,
+    comment_type, body, status: 'open', created_at: now(),
+  });
 
   // RAI creates an applicant task + notifies members
   if (comment_type === 'rai') {
-    await query(
-      `INSERT INTO tasks (project_id, project_approval_id, title, description, waiting_on)
-       VALUES ($1,$2,$3,$4,'applicant')`,
-      [req.params.projectId, req.params.paId, 'Respond to request for additional information', body.slice(0, 500)]);
-    const members = await query(`SELECT user_id FROM project_members WHERE project_id=$1`, [req.params.projectId]);
-    for (const m of members.rows) {
-      await query(`INSERT INTO notifications (user_id, project_id, message) VALUES ($1,$2,$3)`,
-        [m.user_id, req.params.projectId, `New request for additional information recorded: ${body.slice(0, 120)}`]);
+    await insert('tasks', {
+      project_id: projectId, project_approval_id: pa.id,
+      title: 'Respond to request for additional information',
+      description: body.slice(0, 500), waiting_on: 'applicant',
+      assignee_user_id: null, verified_due_date: null,
+      status: 'open', created_at: now(), completed_at: null,
+    });
+    const members = await where('project_members', 'project_id', projectId);
+    for (const m of members) {
+      await insert('notifications', {
+        user_id: m.user_id, project_id: projectId,
+        message: `New request for additional information recorded: ${body.slice(0, 120)}`,
+        read: false, created_at: now(),
+      });
     }
   }
-  await audit(req.user!.id, 'comment.create', 'review_comment', rows[0].id, { comment_type });
-  res.status(201).json({ comment: rows[0] });
+  await audit(req.user!.id, 'comment.create', 'review_comment', comment.id, { comment_type });
+  res.status(201).json({ comment });
 });
 
 reviewsRouter.get('/:projectId/comments', requireProjectAccess(), async (req, res) => {
-  const { rows } = await query(
-    `SELECT rc.*, at.name AS approval_name, u.name AS author_name,
-       (SELECT json_agg(json_build_object('id', cr.id, 'body', cr.body, 'is_draft', cr.is_draft,
-          'ai_generated', cr.ai_generated, 'created_at', cr.created_at) ORDER BY cr.created_at)
-        FROM comment_responses cr WHERE cr.comment_id=rc.id) AS responses
-     FROM review_comments rc
-     JOIN project_approvals pa ON pa.id=rc.project_approval_id
-     JOIN approval_types at ON at.id=pa.approval_type_id
-     LEFT JOIN users u ON u.id=rc.author_user_id
-     WHERE pa.project_id=$1 ORDER BY rc.created_at DESC`, [req.params.projectId]);
-  res.json({ comments: rows });
+  const projectId = Number(req.params.projectId);
+  const comments = sortBy(await where('review_comments', 'project_id', projectId), 'created_at', 'desc');
+  const pas = indexBy(await where('project_approvals', 'project_id', projectId));
+  const types = indexBy(await all('approval_types'));
+  const users = indexBy(await all('users'));
+  const responses = await where('comment_responses', 'project_id', projectId);
+
+  res.json({
+    comments: comments.map(c => ({
+      ...c,
+      approval_name: types[pas[c.project_approval_id]?.approval_type_id]?.name ?? null,
+      author_name: users[c.author_user_id]?.name ?? null,
+      responses: sortBy(responses.filter(r => r.comment_id === c.id), 'created_at')
+        .map(r => ({ id: r.id, body: r.body, is_draft: r.is_draft, ai_generated: r.ai_generated, created_at: r.created_at })),
+    })),
+  });
 });
 
 /** Draft a response to a review comment (optionally AI-assisted; always a draft requiring review). */
 reviewsRouter.post('/:projectId/comments/:commentId/responses', requireProjectAccess(), async (req, res) => {
   const { body, use_ai } = req.body || {};
-  const c = (await query(
-    `SELECT rc.* FROM review_comments rc JOIN project_approvals pa ON pa.id=rc.project_approval_id
-     WHERE rc.id=$1 AND pa.project_id=$2`, [req.params.commentId, req.params.projectId])).rows[0];
-  if (!c) return res.status(404).json({ error: 'Comment not found' });
+  const projectId = Number(req.params.projectId);
+  const c = await getById('review_comments', req.params.commentId);
+  if (!c || c.project_id !== projectId) return res.status(404).json({ error: 'Comment not found' });
 
   let text = body;
   let aiGenerated = false;
   if (use_ai && aiAvailable()) {
-    const project = (await query(`SELECT name, address, units, dev_type FROM projects WHERE id=$1`, [req.params.projectId])).rows[0];
+    const project = await getById('projects', projectId);
     text = await getProvider().complete(
       `You draft professional responses to municipal review comments for housing development applications. Be factual and concise. Never commit to facts you don't have — use [TO CONFIRM] placeholders. This is a DRAFT the applicant must review and approve before submission.`,
       `Project: ${project.name}, ${project.address} (${project.units} units, ${project.dev_type}).\nAgency comment:\n"""${c.body}"""\n\nDraft a response letter body.`);
@@ -67,23 +85,21 @@ reviewsRouter.post('/:projectId/comments/:commentId/responses', requireProjectAc
   }
   if (!text) return res.status(400).json({ error: 'Response body required (or set use_ai with an API key configured)' });
 
-  const { rows } = await query(
-    `INSERT INTO comment_responses (comment_id, body, is_draft, ai_generated, created_by)
-     VALUES ($1,$2,true,$3,$4) RETURNING *`, [req.params.commentId, text, aiGenerated, req.user!.id]);
-  await query(`UPDATE review_comments SET status='responded' WHERE id=$1`, [req.params.commentId]);
-  await audit(req.user!.id, 'comment.respond', 'review_comment', req.params.commentId, { ai_generated: aiGenerated });
-  res.status(201).json({ response: rows[0], notice: 'This is a draft. It must be reviewed and approved by the applicant or an authorized professional before submission.' });
+  const response = await insert('comment_responses', {
+    comment_id: c.id, project_id: projectId, body: text,
+    is_draft: true, ai_generated: aiGenerated, created_by: req.user!.id, created_at: now(),
+  });
+  await updateById('review_comments', c.id, { status: 'responded' });
+  await audit(req.user!.id, 'comment.respond', 'review_comment', c.id, { ai_generated: aiGenerated });
+  res.status(201).json({ response, notice: 'This is a draft. It must be reviewed and approved by the applicant or an authorized professional before submission.' });
 });
 
 reviewsRouter.patch('/:projectId/comments/:commentId', requireProjectAccess(), async (req, res) => {
   const { status } = req.body || {};
   if (!['open','responded','resolved'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
-  const { rows } = await query(
-    `UPDATE review_comments rc SET status=$1 FROM project_approvals pa
-     WHERE rc.id=$2 AND pa.id=rc.project_approval_id AND pa.project_id=$3 RETURNING rc.*`,
-    [status, req.params.commentId, req.params.projectId]);
-  if (!rows.length) return res.status(404).json({ error: 'Not found' });
-  res.json({ comment: rows[0] });
+  const c = await getById('review_comments', req.params.commentId);
+  if (!c || c.project_id !== Number(req.params.projectId)) return res.status(404).json({ error: 'Not found' });
+  res.json({ comment: await updateById('review_comments', c.id, { status }) });
 });
 
 /** Record an official decision (entered by users; the platform never decides). */
@@ -91,61 +107,71 @@ reviewsRouter.post('/:projectId/approvals/:paId/decisions', requireProjectAccess
   const { decision, decided_on, decided_by, notes, conditions = [] } = req.body || {};
   if (!['approved','approved_with_conditions','denied','continued'].includes(decision)) return res.status(400).json({ error: 'Invalid decision' });
   if (!decided_on || !decided_by) return res.status(400).json({ error: 'decided_on and decided_by are required — record the official decision as issued by the authority' });
-  const pa = await query(`SELECT id FROM project_approvals WHERE id=$1 AND project_id=$2`, [req.params.paId, req.params.projectId]);
-  if (!pa.rows.length) return res.status(404).json({ error: 'Approval not found' });
+  const projectId = Number(req.params.projectId);
+  const pa = await paInProject(req.params.paId, projectId);
+  if (!pa) return res.status(404).json({ error: 'Approval not found' });
 
-  const { rows } = await query(
-    `INSERT INTO decisions (project_approval_id, decision, decided_on, decided_by, notes, recorded_by)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-    [req.params.paId, decision, decided_on, decided_by, notes || null, req.user!.id]);
+  const dec = await insert('decisions', {
+    project_approval_id: pa.id, project_id: projectId,
+    decision, decided_on, decided_by, notes: notes || null,
+    recorded_by: req.user!.id, created_at: now(),
+  });
   for (const cDesc of conditions) {
-    await query(`INSERT INTO conditions (decision_id, description) VALUES ($1,$2)`, [rows[0].id, cDesc]);
+    await insert('conditions', { decision_id: dec.id, project_id: projectId, description: cDesc, status: 'open', satisfied_at: null });
   }
-  await query(`UPDATE project_approvals SET status=$1 WHERE id=$2`, [decision, req.params.paId]);
-  await audit(req.user!.id, 'decision.record', 'decision', rows[0].id, { decision });
-  res.status(201).json({ decision: rows[0] });
+  await updateById('project_approvals', pa.id, { status: decision });
+  await audit(req.user!.id, 'decision.record', 'decision', dec.id, { decision });
+  res.status(201).json({ decision: dec });
 });
 
 reviewsRouter.get('/:projectId/decisions', requireProjectAccess(), async (req, res) => {
-  const { rows } = await query(
-    `SELECT d.*, at.name AS approval_name,
-       (SELECT json_agg(json_build_object('id', c.id, 'description', c.description, 'status', c.status)) FROM conditions c WHERE c.decision_id=d.id) AS conditions
-     FROM decisions d
-     JOIN project_approvals pa ON pa.id=d.project_approval_id
-     JOIN approval_types at ON at.id=pa.approval_type_id
-     WHERE pa.project_id=$1 ORDER BY d.decided_on DESC`, [req.params.projectId]);
-  res.json({ decisions: rows });
+  const projectId = Number(req.params.projectId);
+  const decisions = sortBy(await where('decisions', 'project_id', projectId), 'decided_on', 'desc');
+  const pas = indexBy(await where('project_approvals', 'project_id', projectId));
+  const types = indexBy(await all('approval_types'));
+  const conditions = await where('conditions', 'project_id', projectId);
+
+  res.json({
+    decisions: decisions.map(d => ({
+      ...d,
+      approval_name: types[pas[d.project_approval_id]?.approval_type_id]?.name ?? null,
+      conditions: conditions.filter(c => c.decision_id === d.id)
+        .map(c => ({ id: c.id, description: c.description, status: c.status })),
+    })),
+  });
 });
 
 reviewsRouter.patch('/:projectId/conditions/:conditionId', requireProjectAccess(), async (req, res) => {
   const { status } = req.body || {};
   if (!['open','satisfied','waived'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
-  const { rows } = await query(
-    `UPDATE conditions c SET status=$1, satisfied_at = CASE WHEN $1='satisfied' THEN CURRENT_DATE ELSE NULL END
-     FROM decisions d, project_approvals pa
-     WHERE c.id=$2 AND d.id=c.decision_id AND pa.id=d.project_approval_id AND pa.project_id=$3 RETURNING c.*`,
-    [status, req.params.conditionId, req.params.projectId]);
-  if (!rows.length) return res.status(404).json({ error: 'Not found' });
-  res.json({ condition: rows[0] });
+  const c = await getById('conditions', req.params.conditionId);
+  if (!c || c.project_id !== Number(req.params.projectId)) return res.status(404).json({ error: 'Not found' });
+  res.json({ condition: await updateById('conditions', c.id, { status, satisfied_at: status === 'satisfied' ? today() : null }) });
 });
 
 /** Inspections */
 reviewsRouter.post('/:projectId/approvals/:paId/inspections', requireProjectAccess(), async (req, res) => {
   const { name, inspector_agency, scheduled_for, result, notes } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Inspection name required' });
-  const { rows } = await query(
-    `INSERT INTO inspections (project_approval_id, name, inspector_agency, scheduled_for, result, notes)
-     SELECT pa.id, $1,$2,$3,$4,$5 FROM project_approvals pa WHERE pa.id=$6 AND pa.project_id=$7 RETURNING *`,
-    [name, inspector_agency || null, scheduled_for || null, result || 'pending', notes || null, req.params.paId, req.params.projectId]);
-  if (!rows.length) return res.status(404).json({ error: 'Approval not found' });
-  res.status(201).json({ inspection: rows[0] });
+  const projectId = Number(req.params.projectId);
+  const pa = await paInProject(req.params.paId, projectId);
+  if (!pa) return res.status(404).json({ error: 'Approval not found' });
+  const inspection = await insert('inspections', {
+    project_approval_id: pa.id, project_id: projectId, name,
+    inspector_agency: inspector_agency || null, scheduled_for: scheduled_for || null,
+    result: result || 'pending', notes: notes || null,
+  });
+  res.status(201).json({ inspection });
 });
 
 reviewsRouter.get('/:projectId/inspections', requireProjectAccess(), async (req, res) => {
-  const { rows } = await query(
-    `SELECT i.*, at.name AS approval_name FROM inspections i
-     JOIN project_approvals pa ON pa.id=i.project_approval_id
-     JOIN approval_types at ON at.id=pa.approval_type_id
-     WHERE pa.project_id=$1 ORDER BY i.scheduled_for NULLS LAST`, [req.params.projectId]);
-  res.json({ inspections: rows });
+  const projectId = Number(req.params.projectId);
+  const inspections = sortBy(await where('inspections', 'project_id', projectId), 'scheduled_for');
+  const pas = indexBy(await where('project_approvals', 'project_id', projectId));
+  const types = indexBy(await all('approval_types'));
+  res.json({
+    inspections: inspections.map(i => ({
+      ...i, approval_name: types[pas[i.project_approval_id]?.approval_type_id]?.name ?? null,
+    })),
+  });
 });

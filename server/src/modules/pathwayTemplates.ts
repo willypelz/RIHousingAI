@@ -84,4 +84,35 @@ export const CHECKLIST_TEMPLATES: Record<string, ChecklistTemplateItem[]> = {
     { title: 'Milestone inspections', item_type: 'instruction', description: 'Schedule required inspections (footing/foundation, framing, electrical, mechanical, plumbing, insulation, fire) with the Building Official at prescribed milestones.' },
     { title: 'Final inspections and Certificate of Occupancy', item_type: 'certification', description: 'Final inspections by building and fire officials, then Certificate of Occupancy from the Building Official before occupancy.' },
   ],
+
+  // Generic statewide fallbacks — used for municipalities whose local procedures
+  // are not yet verified on this platform. Grounded in statewide frameworks only.
+  planning_generic: [
+    { title: 'Contact the municipal planning department', item_type: 'instruction', description: 'Confirm the local review track, submission requirements, meeting schedule, and fees with the planning department. Local procedures for this municipality are not yet verified on this platform.' },
+    { title: 'Land development application form (local)', item_type: 'form', description: 'Obtain the municipality\u2019s land development / subdivision application form. Major projects follow Master Plan, Preliminary Plan and Final Plan stages under RIGL 45-23.' },
+    { title: 'Site plans by registered professional', item_type: 'plan', description: 'Existing and proposed conditions plans prepared and stamped by a RI-registered professional engineer or land surveyor, per RIGL 45-23 and local regulations.' },
+    { title: 'Application fee (per local fee schedule)', item_type: 'fee', description: 'Fee amounts are set by the municipality\u2019s fee schedule. Confirm the current amount with the planning department \u2014 this platform does not estimate fees.' },
+    { title: 'Public hearing (major projects)', item_type: 'hearing', description: 'Major land development review includes public notice and hearing requirements under RIGL 45-23. Confirm scheduling with the planning department.' },
+  ],
+  building_permit_generic: [
+    { title: 'Planning approval (prerequisite)', item_type: 'prerequisite', description: 'Land development projects generally require planning approval before a building permit can be issued.' },
+    { title: 'Building permit application (local building official)', item_type: 'form', description: 'Building permits are issued by the municipal building official under the RI State Building Code. Obtain the local application form.' },
+    { title: 'Stamped construction drawings', item_type: 'plan', description: 'Construction plans stamped by a RI-registered architect or professional engineer (required for multi-unit buildings).' },
+    { title: 'Permit fee (based on construction value)', item_type: 'fee', description: 'Calculated per the municipal fee schedule. Confirm with the local building office.' },
+    { title: 'Trade permits (electrical, mechanical, plumbing)', item_type: 'referral', description: 'Separate permits pulled by licensed trades-persons.' },
+  ],
+  fire_generic: [
+    { title: 'Confirm the fire authority having jurisdiction', item_type: 'instruction', description: 'Determine whether the local fire marshal or the State Fire Marshal reviews plans for this building type, per the RI Fire Safety Code.' },
+    { title: 'Fire plan review application', item_type: 'form', description: 'Plan review application to the fire marshal having jurisdiction, including fire protection system plans where required.' },
+  ],
+  sewer_generic: [
+    { title: 'Confirm sewer availability for the parcel', item_type: 'instruction', description: 'Contact the municipal public works / sewer authority to confirm whether the parcel is served by public sewer and what connection approvals apply. If not served, a RIDEM OWTS permit applies instead.' },
+  ],
+  water_generic: [
+    { title: 'Confirm the water supplier and connection requirements', item_type: 'instruction', description: 'Identify the water supplier for the parcel and request availability and connection requirements, including any capacity/fire-flow review for multi-unit projects.' },
+  ],
+  inspections_generic: [
+    { title: 'Building permit issued (prerequisite)', item_type: 'prerequisite', description: 'Inspections begin after the building permit is issued.' },
+    { title: 'Milestone inspections and Certificate of Occupancy', item_type: 'instruction', description: 'Schedule required inspections with the municipal building official; occupancy requires final inspections and a Certificate of Occupancy under the RI State Building Code.' },
+  ],
 };

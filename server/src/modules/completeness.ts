@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db/pool.js';
+import { insert, where, all, getById, updateById, now, indexBy, sortBy } from '../db/firestore.js';
 import { requireAuth, requireProjectAccess } from '../middleware/auth.js';
 import { audit } from '../middleware/audit.js';
 import { getProvider, aiAvailable } from '../ai/provider.js';
@@ -21,26 +21,28 @@ interface Finding {
 
 completenessRouter.post('/:projectId/completeness-checks', requireProjectAccess(), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  const project = (await query(`SELECT * FROM projects WHERE id=$1`, [projectId])).rows[0];
+  const project = await getById('projects', projectId);
   if (!project) return res.status(404).json({ error: 'Project not found' });
 
-  const items = (await query(
-    `SELECT ci.id, ci.title, ci.item_type, ci.status, ci.description, at.name AS approval_name
-     FROM checklist_items ci
-     JOIN project_approvals pa ON pa.id=ci.project_approval_id
-     JOIN approval_types at ON at.id=pa.approval_type_id
-     WHERE pa.project_id=$1 AND pa.applicability != 'not_applicable'`, [projectId])).rows;
+  const pas = indexBy(await where('project_approvals', 'project_id', projectId));
+  const types = indexBy(await all('approval_types'));
+  const items = (await where('checklist_items', 'project_id', projectId))
+    .filter(ci => pas[ci.project_approval_id]?.applicability !== 'not_applicable')
+    .map(ci => ({ ...ci, approval_name: types[pas[ci.project_approval_id]?.approval_type_id]?.name ?? '' }));
 
-  const docs = (await query(
-    `SELECT d.id AS document_id, d.title, d.category, d.checklist_item_id,
-            v.id AS version_id, v.original_name, v.extracted_text
-     FROM documents d
-     JOIN LATERAL (SELECT * FROM document_versions v WHERE v.document_id=d.id ORDER BY version DESC LIMIT 1) v ON true
-     WHERE d.project_id=$1`, [projectId])).rows;
+  const documents = await where('documents', 'project_id', projectId);
+  const versions = await where('document_versions', 'project_id', projectId);
+  const docs = documents.map(d => {
+    const latest = sortBy(versions.filter(v => v.document_id === d.id), 'version', 'desc')[0];
+    return latest ? {
+      document_id: d.id, title: d.title, category: d.category, checklist_item_id: d.checklist_item_id,
+      version_id: latest.id, original_name: latest.original_name, extracted_text: latest.extracted_text,
+    } : null;
+  }).filter(Boolean) as any[];
 
   const findings: Finding[] = [];
 
-  // Rule-based pass (always runs): checklist items of document/plan/form type with no linked upload and not complete
+  // Rule-based pass (always runs)
   for (const item of items) {
     if (!['document','plan','form','certification'].includes(item.item_type)) continue;
     if (item.status === 'complete' || item.status === 'not_applicable') continue;
@@ -69,7 +71,6 @@ completenessRouter.post('/:projectId/completeness-checks', requireProjectAccess(
         document_version_id: d.version_id,
       });
     }
-    // Project info consistency: units count mentioned in documents vs registered
     const unitMatches = text.match(/(\d+)\s*(dwelling\s+)?units?/);
     if (unitMatches && Number(unitMatches[1]) !== project.units && Number(unitMatches[1]) > 0) {
       findings.push({
@@ -107,34 +108,37 @@ completenessRouter.post('/:projectId/completeness-checks', requireProjectAccess(
     }
   }
 
-  const check = (await query(
-    `INSERT INTO completeness_checks (project_id, run_by, engine, disclaimer) VALUES ($1,$2,$3,$4) RETURNING *`,
-    [projectId, req.user!.id, engine, DISCLAIMER])).rows[0];
+  const check = await insert('completeness_checks', {
+    project_id: projectId, run_by: req.user!.id, engine, disclaimer: DISCLAIMER, created_at: now(),
+  });
+  const stored = [];
   for (const f of findings) {
-    await query(
-      `INSERT INTO completeness_findings (check_id, finding_type, severity, title, detail, evidence, document_version_id, checklist_item_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [check.id, f.finding_type, f.severity, f.title, f.detail ?? null, f.evidence ?? null, f.document_version_id ?? null, f.checklist_item_id ?? null]);
+    stored.push(await insert('completeness_findings', {
+      check_id: check.id, project_id: projectId,
+      finding_type: f.finding_type, severity: f.severity, title: f.title,
+      detail: f.detail ?? null, evidence: f.evidence ?? null,
+      document_version_id: f.document_version_id ?? null,
+      checklist_item_id: f.checklist_item_id ?? null, resolved: false,
+    }));
   }
   await audit(req.user!.id, 'completeness.run', 'completeness_check', check.id, { findings: findings.length, engine });
-
-  const stored = (await query(`SELECT * FROM completeness_findings WHERE check_id=$1 ORDER BY severity DESC, id`, [check.id])).rows;
   res.status(201).json({ check, findings: stored });
 });
 
 completenessRouter.get('/:projectId/completeness-checks', requireProjectAccess(), async (req, res) => {
-  const { rows } = await query(
-    `SELECT cc.*, (SELECT json_agg(f.* ORDER BY f.id) FROM completeness_findings f WHERE f.check_id=cc.id) AS findings
-     FROM completeness_checks cc WHERE cc.project_id=$1 ORDER BY cc.created_at DESC LIMIT 10`, [req.params.projectId]);
-  res.json({ checks: rows });
+  const projectId = Number(req.params.projectId);
+  const checks = sortBy(await where('completeness_checks', 'project_id', projectId), 'created_at', 'desc').slice(0, 10);
+  const findings = await where('completeness_findings', 'project_id', projectId);
+  res.json({
+    checks: checks.map(c => ({
+      ...c, findings: sortBy(findings.filter(f => f.check_id === c.id), 'id'),
+    })),
+  });
 });
 
 completenessRouter.patch('/:projectId/findings/:findingId', requireProjectAccess(), async (req, res) => {
   const { resolved } = req.body || {};
-  const { rows } = await query(
-    `UPDATE completeness_findings f SET resolved=$1
-     FROM completeness_checks cc WHERE f.id=$2 AND cc.id=f.check_id AND cc.project_id=$3 RETURNING f.*`,
-    [!!resolved, req.params.findingId, req.params.projectId]);
-  if (!rows.length) return res.status(404).json({ error: 'Not found' });
-  res.json({ finding: rows[0] });
+  const f = await getById('completeness_findings', req.params.findingId);
+  if (!f || f.project_id !== Number(req.params.projectId)) return res.status(404).json({ error: 'Not found' });
+  res.json({ finding: await updateById('completeness_findings', f.id, { resolved: !!resolved }) });
 });

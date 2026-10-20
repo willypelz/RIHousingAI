@@ -5,3 +5,4 @@ server/uploads/*
 !server/uploads/.gitkeep
 .idea/
 .DS_Store
+.firebase/

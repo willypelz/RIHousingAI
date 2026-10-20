@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { query } from '../db/pool.js';
+import { where } from '../db/firestore.js';
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
@@ -36,8 +36,8 @@ export function requireRole(...roles: string[]) {
 /** Allow access if the user is a project member, municipal_staff, or admin. */
 export async function canAccessProject(user: AuthUser, projectId: number): Promise<boolean> {
   if (user.role === 'admin' || user.role === 'municipal_staff') return true;
-  const r = await query(`SELECT 1 FROM project_members WHERE project_id=$1 AND user_id=$2`, [projectId, user.id]);
-  return r.rows.length > 0;
+  const members = await where('project_members', 'project_id', projectId);
+  return members.some(m => m.user_id === user.id);
 }
 
 export function requireProjectAccess(paramName = 'projectId') {

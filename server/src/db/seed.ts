@@ -1,5 +1,4 @@
-import { pool } from './pool.js';
-import { migrate } from './migrate.js';
+import { insert, all, col, today } from './firestore.js';
 
 const RI_MUNICIPALITIES = [
   'Barrington','Bristol','Burrillville','Central Falls','Charlestown','Coventry','Cranston','Cumberland',
@@ -11,27 +10,27 @@ const RI_MUNICIPALITIES = [
 ];
 
 export async function seed() {
-  await migrate();
-  const { rows: existing } = await pool.query(`SELECT 1 FROM municipalities LIMIT 1`);
+  const existing = await all('municipalities');
   if (existing.length) { console.log('already seeded'); return; }
 
   // Municipalities
+  let cumberlandId = 0;
   for (const name of RI_MUNICIPALITIES) {
-    await pool.query(
-      `INSERT INTO municipalities (name, coverage_status, website) VALUES ($1, $2, $3)`,
-      [name, name === 'Cumberland' ? 'partial' : 'planned', name === 'Cumberland' ? 'https://www.cumberlandri.org' : null]
-    );
+    const m = await insert('municipalities', {
+      name, state: 'RI',
+      coverage_status: name === 'Cumberland' ? 'partial' : 'planned',
+      website: name === 'Cumberland' ? 'https://www.cumberlandri.org' : null,
+    });
+    if (name === 'Cumberland') cumberlandId = m.id;
   }
-  const cumberlandId = (await pool.query(`SELECT id FROM municipalities WHERE name='Cumberland'`)).rows[0].id;
 
   // Agencies
   const agency = async (level: string, name: string, dept: string | null, phone: string | null, email: string | null, address: string | null, website: string | null, muni = true) => {
-    const r = await pool.query(
-      `INSERT INTO agencies (municipality_id, level, name, department, phone, email, address, website)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-      [muni ? cumberlandId : null, level, name, dept, phone, email, address, website]
-    );
-    return r.rows[0].id as number;
+    const a = await insert('agencies', {
+      municipality_id: muni ? cumberlandId : null, level, name,
+      department: dept, phone, email, address, website,
+    });
+    return a.id as number;
   };
 
   const planningId = await agency('municipal', 'Town of Cumberland', 'Planning & Community Development', '(401) 728-2400', null, '45 Broad Street, Cumberland, RI 02864', 'https://www.cumberlandri.org/180/Planning-Community-Development');
@@ -47,12 +46,13 @@ export async function seed() {
   // Official sources. last_verified_at reflects when this seed data was curated;
   // the UI must instruct users to re-verify with the authority.
   const source = async (agencyId: number, authority: string, title: string, url: string, summary: string, content: string, feesNote: string | null, processing: string | null) => {
-    const r = await pool.query(
-      `INSERT INTO official_sources (agency_id, authority, title, url, summary, content, fees_note, processing_estimate, last_verified_at, doc_version)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, CURRENT_DATE, 'seed-curated') RETURNING id`,
-      [agencyId, authority, title, url, summary, content, feesNote, processing]
-    );
-    return r.rows[0].id as number;
+    const s = await insert('official_sources', {
+      agency_id: agencyId, authority, title, url, summary, content,
+      fees_note: feesNote, processing_estimate: processing,
+      last_verified_at: today(), doc_version: 'seed-curated',
+      published_date: null, effective_date: null,
+    });
+    return s.id as number;
   };
 
   const sPlanning = await source(planningId,
@@ -68,7 +68,7 @@ Contact the Planning Department at (401) 728-2400 to confirm current submission 
     'Application fees are set by the Town fee schedule; confirm the current amount with the Planning Department before submitting.',
     'RIGL 45-23 sets statutory review periods (e.g., completeness certification within 25 days for master plan). These are published statutory periods, not guaranteed project timelines.');
 
-  await source(planningId,
+  const sRigl = await source(planningId,
     'State of Rhode Island General Laws',
     'RIGL Title 45, Chapter 45-23 — Land Development and Subdivision Review Enabling Act',
     'http://webserver.rilegislature.gov/Statutes/TITLE45/45-23/INDEX.htm',
@@ -156,29 +156,33 @@ Confirm sewer availability for the specific parcel with DPW.`,
     null);
 
   // Approval types with applicability rules
-  const at = async (code: string, name: string, category: string, description: string, agencyId: number, rules: object, sourceId: number) => {
-    await pool.query(
-      `INSERT INTO approval_types (code, name, category, description, agency_id, applicability_rules, source_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [code, name, category, description, agencyId, JSON.stringify(rules), sourceId]
-    );
+  // slot: functional role (planning/building/fire/sewer/water/inspections). A municipal
+  // type fills its slot for its municipality; a generic statewide type with the same slot
+  // is used as fallback for municipalities without verified local data. slot=null types
+  // (e.g. RIDEM, E-911) are statewide and always considered.
+  const at = async (code: string, name: string, category: string, description: string, agencyId: number | null, rules: object, sourceId: number, municipalityId: number | null = null, slot: string | null = null, isGeneric = false) => {
+    await insert('approval_types', {
+      code, name, category, description, agency_id: agencyId,
+      applicability_rules: rules, source_id: sourceId,
+      municipality_id: municipalityId, slot, is_generic: isGeneric,
+    });
   };
 
   await at('planning_major_land_dev', 'Major Land Development Review (Planning Board)', 'planning',
     'Master Plan / Preliminary Plan / Final Plan review by the Cumberland Planning Board for major residential land development projects, per RIGL 45-23 and local regulations.',
-    planningId, { min_units: 2, construction_kinds: ['new_construction','conversion','addition'] }, sPlanning);
+    planningId, { min_units: 2, construction_kinds: ['new_construction','conversion','addition'] }, sPlanning, cumberlandId, 'planning');
 
   await at('building_permit', 'Building Permit', 'building',
     'Building permit from the Cumberland Building Official under the RI State Building Code. Requires stamped plans for multi-unit buildings. Prerequisite: planning approval for land development projects.',
-    buildingId, { min_units: 1 }, sBuilding);
+    buildingId, { min_units: 1 }, sBuilding, cumberlandId, 'building');
 
   await at('fire_plan_review', 'Fire & Life-Safety Plan Review', 'fire',
     'Fire Safety Code plan review (building, sprinkler, alarm) by the fire marshal having jurisdiction, plus pre-occupancy inspections.',
-    fireId, { min_units: 3, condition_note: 'Required for 3+ unit buildings; confirm reviewing authority (local vs. state fire marshal) with the Cumberland Fire District.' }, sFire);
+    fireId, { min_units: 3, condition_note: 'Required for 3+ unit buildings; confirm reviewing authority (local vs. state fire marshal) with the Cumberland Fire District.' }, sFire, cumberlandId, 'fire');
 
   await at('sewer_connection', 'Sewer Connection Permit', 'utility',
     'Sewer connection permit and capacity review from Cumberland DPW for projects served by public sewer.',
-    dpwId, { requires: { sewer_service: 'public_sewer' }, conditional_on_unknown: 'sewer_service', condition_note: 'Applies only if the parcel is served by public sewer; confirm availability with DPW.' }, sSewer);
+    dpwId, { requires: { sewer_service: 'public_sewer' }, conditional_on_unknown: 'sewer_service', condition_note: 'Applies only if the parcel is served by public sewer; confirm availability with DPW.' }, sSewer, cumberlandId, 'sewer');
 
   await at('ridem_owts', 'RIDEM OWTS (Septic) Permit', 'environmental',
     'Onsite wastewater treatment system permit from RIDEM — only for projects NOT connected to public sewer.',
@@ -186,7 +190,7 @@ Confirm sewer availability for the specific parcel with DPW.`,
 
   await at('water_connection', 'Water Service Connection Approval', 'utility',
     'Water availability confirmation and connection approval from the Cumberland Water Department (or applicable supplier).',
-    waterId, { requires: { water_service: 'public_water' }, conditional_on_unknown: 'water_service', condition_note: 'Confirm the water supplier and service availability for the parcel.' }, sWater);
+    waterId, { requires: { water_service: 'public_water' }, conditional_on_unknown: 'water_service', condition_note: 'Confirm the water supplier and service availability for the parcel.' }, sWater, cumberlandId, 'water');
 
   await at('ridem_stormwater', 'RIPDES Construction Stormwater Permit', 'environmental',
     'RIDEM construction general permit for land disturbance of one acre or more (SWPPP required).',
@@ -198,11 +202,34 @@ Confirm sewer availability for the specific parcel with DPW.`,
 
   await at('inspections_co', 'Construction Inspections & Certificate of Occupancy', 'inspection',
     'Required construction milestone inspections (building, electrical, mechanical, plumbing, fire) and final Certificate of Occupancy from the Building Official.',
-    buildingId, { min_units: 1 }, sSbc);
+    buildingId, { min_units: 1 }, sSbc, cumberlandId, 'inspections');
+
+
+  // Generic statewide fallbacks for municipalities without verified local data.
+  // Grounded only in statewide frameworks (RIGL 45-23, State Building Code, Fire Safety Code).
+  await at('planning_generic', 'Municipal Land Development Review', 'planning',
+    'Land development / subdivision review by the municipal planning board under RIGL 45-23. Local submission requirements are not yet verified on this platform — confirm with the municipal planning department.',
+    sbcId, { min_units: 2 }, sRigl, null, 'planning', true);
+
+  await at('building_permit_generic', 'Building Permit', 'building',
+    'Building permit from the municipal building official under the RI State Building Code. Confirm local application requirements with the building office.',
+    sbcId, { min_units: 1 }, sSbc, null, 'building', true);
+
+  await at('fire_generic', 'Fire & Life-Safety Plan Review', 'fire',
+    'Fire Safety Code plan review by the fire marshal having jurisdiction. Confirm the reviewing authority for this municipality and building type.',
+    fmId, { min_units: 3, condition_note: 'Required for 3+ unit buildings; confirm the reviewing authority (local vs. state fire marshal).' }, sFire, null, 'fire', true);
+
+  await at('sewer_generic', 'Sewer Connection / Wastewater Approval', 'utility',
+    'Sewer connection approval from the municipal sewer authority for parcels on public sewer. If the parcel is not served by sewer, a RIDEM OWTS permit applies instead.',
+    sbcId, { requires: { sewer_service: 'public_sewer' }, conditional_on_unknown: 'sewer_service', condition_note: 'Applies only if the parcel is served by public sewer; confirm availability with the municipal sewer authority.' }, sRigl, null, 'sewer', true);
+
+  await at('water_generic', 'Water Service Connection Approval', 'utility',
+    'Water availability confirmation and connection approval from the water supplier serving the parcel.',
+    sbcId, { requires: { water_service: 'public_water' }, conditional_on_unknown: 'water_service', condition_note: 'Confirm the water supplier and service availability for the parcel.' }, sRigl, null, 'water', true);
+
+  await at('inspections_generic', 'Construction Inspections & Certificate of Occupancy', 'inspection',
+    'Required construction milestone inspections and final Certificate of Occupancy from the municipal building official under the RI State Building Code.',
+    sbcId, { min_units: 1 }, sSbc, null, 'inspections', true);
 
   console.log('seed complete');
-}
-
-if (process.argv[1] && process.argv[1].endsWith('seed.ts')) {
-  seed().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
 }
