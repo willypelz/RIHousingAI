@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db/pool.js';
+import { insert, where, all, getById, updateById, now, indexBy, sortBy } from '../db/firestore.js';
 import { requireAuth, canAccessProject } from '../middleware/auth.js';
 import { getProvider, aiAvailable } from '../ai/provider.js';
 import { retrieveSources, formatSourcesForPrompt } from '../ai/retrieval.js';
@@ -22,32 +22,31 @@ Style:
 - End with one brief line noting sources were last verified on their stated date and should be re-confirmed with the authority — do not repeat this mid-answer.`;
 
 async function buildProjectContext(projectId: number): Promise<string> {
-  const p = (await query(
-    `SELECT p.*, m.name AS municipality_name FROM projects p JOIN municipalities m ON m.id=p.municipality_id WHERE p.id=$1`,
-    [projectId])).rows[0];
+  const p = await getById('projects', projectId);
   if (!p) return '';
-  const approvals = (await query(
-    `SELECT at.name, pa.applicability, pa.applicability_note, pa.status FROM project_approvals pa
-     JOIN approval_types at ON at.id=pa.approval_type_id WHERE pa.project_id=$1`, [projectId])).rows;
-  const checklist = (await query(
-    `SELECT ci.title, ci.status, at.name AS approval FROM checklist_items ci
-     JOIN project_approvals pa ON pa.id=ci.project_approval_id
-     JOIN approval_types at ON at.id=pa.approval_type_id
-     WHERE pa.project_id=$1 AND ci.status NOT IN ('complete','not_applicable') LIMIT 40`, [projectId])).rows;
-  const stages = (await query(
-    `SELECT rs.name, rs.status, at.name AS approval FROM review_stages rs
-     JOIN project_approvals pa ON pa.id=rs.project_approval_id
-     JOIN approval_types at ON at.id=pa.approval_type_id
-     WHERE pa.project_id=$1 AND rs.status IN ('active','waiting_on_agency','waiting_on_applicant')`, [projectId])).rows;
-  const comments = (await query(
-    `SELECT rc.comment_type, rc.body, rc.status FROM review_comments rc
-     JOIN project_approvals pa ON pa.id=rc.project_approval_id WHERE pa.project_id=$1 AND rc.status != 'resolved' LIMIT 10`, [projectId])).rows;
+  const munis = indexBy(await all('municipalities'));
+  const types = indexBy(await all('approval_types'));
+  const pas = await where('project_approvals', 'project_id', projectId);
+  const pasById = indexBy(pas);
+  const approvalName = (paId: number) => types[pasById[paId]?.approval_type_id]?.name ?? '';
+
+  const approvals = pas.map(a => `${types[a.approval_type_id]?.name} [${a.applicability}${a.applicability_note ? ': ' + a.applicability_note : ''}, status: ${a.status}]`);
+  const checklist = (await where('checklist_items', 'project_id', projectId))
+    .filter(c => !['complete', 'not_applicable'].includes(c.status)).slice(0, 40)
+    .map(c => `${c.title} (${approvalName(c.project_approval_id)}, ${c.status})`);
+  const stages = (await where('review_stages', 'project_id', projectId))
+    .filter(s => ['active', 'waiting_on_agency', 'waiting_on_applicant'].includes(s.status))
+    .map(s => `${s.name} (${approvalName(s.project_approval_id)}): ${s.status}`);
+  const comments = (await where('review_comments', 'project_id', projectId))
+    .filter(c => c.status !== 'resolved').slice(0, 10)
+    .map(c => `[${c.comment_type}] ${c.body.slice(0, 200)}`);
+
   return `PROJECT CONTEXT:
-${p.name} — ${p.address}, ${p.municipality_name}. ${p.units} units, ${p.dev_type}, ${p.construction_kind}. Status: ${p.status}. Sewer: ${p.sewer_service}, water: ${p.water_service}.
-Approval pathway: ${approvals.map(a => `${a.name} [${a.applicability}${a.applicability_note ? ': ' + a.applicability_note : ''}, status: ${a.status}]`).join('; ') || 'not yet generated'}.
-Outstanding checklist items: ${checklist.map(c => `${c.title} (${c.approval}, ${c.status})`).join('; ') || 'none recorded'}.
-Current stages: ${stages.map(s => `${s.name} (${s.approval}): ${s.status}`).join('; ') || 'none active'}.
-Open agency feedback: ${comments.map(c => `[${c.comment_type}] ${c.body.slice(0, 200)}`).join(' | ') || 'none'}.`;
+${p.name} — ${p.address}, ${munis[p.municipality_id]?.name}. ${p.units} units, ${p.dev_type}, ${p.construction_kind}. Status: ${p.status}. Sewer: ${p.sewer_service}, water: ${p.water_service}.
+Approval pathway: ${approvals.join('; ') || 'not yet generated'}.
+Outstanding checklist items: ${checklist.join('; ') || 'none recorded'}.
+Current stages: ${stages.join('; ') || 'none active'}.
+Open agency feedback: ${comments.join(' | ') || 'none'}.`;
 }
 
 function fallbackAnswer(sources: Awaited<ReturnType<typeof retrieveSources>>): string {
@@ -63,26 +62,26 @@ assistantRouter.post('/chat', async (req, res) => {
     return res.status(403).json({ error: 'You do not have access to this project' });
   }
 
-  let convId = conversation_id;
+  let convId = conversation_id ? Number(conversation_id) : null;
   if (!convId) {
-    const r = await query(
-      `INSERT INTO assistant_conversations (project_id, user_id, title) VALUES ($1,$2,$3) RETURNING id`,
-      [project_id || null, req.user!.id, message.slice(0, 80)]);
-    convId = r.rows[0].id;
+    const conv = await insert('assistant_conversations', {
+      project_id: project_id ? Number(project_id) : null, user_id: req.user!.id,
+      title: message.slice(0, 80), created_at: now(),
+    });
+    convId = conv.id;
   } else {
-    const owns = await query(`SELECT 1 FROM assistant_conversations WHERE id=$1 AND user_id=$2`, [convId, req.user!.id]);
-    if (!owns.rows.length) return res.status(403).json({ error: 'Not your conversation' });
+    const conv = await getById('assistant_conversations', convId);
+    if (!conv || conv.user_id !== req.user!.id) return res.status(403).json({ error: 'Not your conversation' });
   }
 
-  await query(`INSERT INTO assistant_messages (conversation_id, role, content) VALUES ($1,'user',$2)`, [convId, message]);
+  await insert('assistant_messages', { conversation_id: convId, role: 'user', content: message, cited_source_ids: [], created_at: now() });
 
   const sources = await retrieveSources(message, 5);
   const projectContext = project_id ? await buildProjectContext(Number(project_id)) : '';
 
   let answer: string;
   if (aiAvailable()) {
-    const history = (await query(
-      `SELECT role, content FROM assistant_messages WHERE conversation_id=$1 ORDER BY id DESC LIMIT 6`, [convId])).rows.reverse();
+    const history = sortBy(await where('assistant_messages', 'conversation_id', convId), 'id').slice(-6);
     const historyText = history.slice(0, -1).map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
     try {
       answer = await getProvider().complete(SYSTEM,
@@ -96,9 +95,10 @@ assistantRouter.post('/chat', async (req, res) => {
     answer = fallbackAnswer(sources);
   }
 
-  const saved = (await query(
-    `INSERT INTO assistant_messages (conversation_id, role, content, cited_source_ids) VALUES ($1,'assistant',$2,$3) RETURNING *`,
-    [convId, answer, sources.map(s => s.id)])).rows[0];
+  const saved = await insert('assistant_messages', {
+    conversation_id: convId, role: 'assistant', content: answer,
+    cited_source_ids: sources.map(s => s.id), created_at: now(),
+  });
 
   res.json({
     conversation_id: convId,
@@ -108,14 +108,12 @@ assistantRouter.post('/chat', async (req, res) => {
 });
 
 assistantRouter.get('/conversations', async (req, res) => {
-  const { rows } = await query(
-    `SELECT * FROM assistant_conversations WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20`, [req.user!.id]);
+  const rows = sortBy(await where('assistant_conversations', 'user_id', req.user!.id), 'created_at', 'desc').slice(0, 20);
   res.json({ conversations: rows });
 });
 
 assistantRouter.get('/conversations/:id/messages', async (req, res) => {
-  const owns = await query(`SELECT 1 FROM assistant_conversations WHERE id=$1 AND user_id=$2`, [req.params.id, req.user!.id]);
-  if (!owns.rows.length) return res.status(403).json({ error: 'Not your conversation' });
-  const { rows } = await query(`SELECT * FROM assistant_messages WHERE conversation_id=$1 ORDER BY id`, [req.params.id]);
-  res.json({ messages: rows });
+  const conv = await getById('assistant_conversations', req.params.id);
+  if (!conv || conv.user_id !== req.user!.id) return res.status(403).json({ error: 'Not your conversation' });
+  res.json({ messages: sortBy(await where('assistant_messages', 'conversation_id', conv.id), 'id') });
 });

@@ -1,4 +1,4 @@
-import { query } from '../db/pool.js';
+import { all } from '../db/firestore.js';
 
 export interface SourceDoc {
   id: number; authority: string; title: string; url: string; summary: string | null;
@@ -9,7 +9,7 @@ export interface SourceDoc {
 /** Simple keyword retrieval over official_sources (sufficient for the curated corpus). */
 export async function retrieveSources(queryText: string, limit = 5): Promise<SourceDoc[]> {
   const terms = queryText.toLowerCase().split(/\W+/).filter(t => t.length > 3);
-  const { rows } = await query<SourceDoc>(`SELECT id, authority, title, url, summary, content, fees_note, processing_estimate, last_verified_at::text FROM official_sources`);
+  const rows = await all<SourceDoc>('official_sources');
   const scored = rows.map(s => {
     const hay = `${s.title} ${s.summary ?? ''} ${s.content ?? ''}`.toLowerCase();
     const score = terms.reduce((acc, t) => acc + (hay.includes(t) ? 1 : 0), 0);

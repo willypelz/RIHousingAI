@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db/pool.js';
+import { where, all, getById, indexBy, sortBy } from '../db/firestore.js';
 import { requireAuth, requireProjectAccess } from '../middleware/auth.js';
 
 export const reportsRouter = Router();
@@ -8,35 +8,43 @@ reportsRouter.use(requireAuth);
 /** Downloadable project status report (self-contained HTML, printable to PDF). */
 reportsRouter.get('/:projectId/report', requireProjectAccess(), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  const p = (await query(
-    `SELECT p.*, m.name AS municipality_name FROM projects p JOIN municipalities m ON m.id=p.municipality_id WHERE p.id=$1`,
-    [projectId])).rows[0];
+  const p = await getById('projects', projectId);
   if (!p) return res.status(404).json({ error: 'Project not found' });
 
-  const approvals = (await query(
-    `SELECT at.name, pa.applicability, pa.applicability_note, pa.status, a.name AS agency, a.department,
-            s.url AS source_url, s.last_verified_at
-     FROM project_approvals pa JOIN approval_types at ON at.id=pa.approval_type_id
-     LEFT JOIN agencies a ON a.id=at.agency_id
-     LEFT JOIN official_sources s ON s.id=at.source_id
-     WHERE pa.project_id=$1 ORDER BY at.id`, [projectId])).rows;
+  const munis = indexBy(await all('municipalities'));
+  const types = indexBy(await all('approval_types'));
+  const agencies = indexBy(await all('agencies'));
+  const sources = indexBy(await all('official_sources'));
+  const pas = sortBy(await where('project_approvals', 'project_id', projectId), 'approval_type_id');
+  const pasById = indexBy(pas);
+  const approvalName = (paId: number) => types[pasById[paId]?.approval_type_id]?.name ?? '';
 
-  const checklist = (await query(
-    `SELECT ci.title, ci.status, ci.item_type, at.name AS approval FROM checklist_items ci
-     JOIN project_approvals pa ON pa.id=ci.project_approval_id
-     JOIN approval_types at ON at.id=pa.approval_type_id WHERE pa.project_id=$1 ORDER BY at.id, ci.sort_order`, [projectId])).rows;
+  const approvals = pas.map(pa => {
+    const t = types[pa.approval_type_id] || {};
+    const a = agencies[t.agency_id] || {};
+    const s = sources[t.source_id] || {};
+    return {
+      name: t.name, applicability: pa.applicability, applicability_note: pa.applicability_note,
+      status: pa.status, agency: a.name, department: a.department,
+      source_url: s.url, last_verified_at: s.last_verified_at,
+    };
+  });
 
-  const stages = (await query(
-    `SELECT rs.name, rs.status, rs.responsible_authority, rs.submitted_at, at.name AS approval
-     FROM review_stages rs JOIN project_approvals pa ON pa.id=rs.project_approval_id
-     JOIN approval_types at ON at.id=pa.approval_type_id WHERE pa.project_id=$1 ORDER BY pa.id, rs.sort_order`, [projectId])).rows;
+  const checklist = (await where('checklist_items', 'project_id', projectId))
+    .sort((a, b) => a.project_approval_id - b.project_approval_id || a.sort_order - b.sort_order)
+    .map(c => ({ title: c.title, status: c.status, item_type: c.item_type, approval: approvalName(c.project_approval_id) }));
 
-  const openComments = (await query(
-    `SELECT rc.comment_type, rc.body, rc.status, rc.created_at FROM review_comments rc
-     JOIN project_approvals pa ON pa.id=rc.project_approval_id WHERE pa.project_id=$1 AND rc.status!='resolved'`, [projectId])).rows;
+  const stages = (await where('review_stages', 'project_id', projectId))
+    .sort((a, b) => a.project_approval_id - b.project_approval_id || a.sort_order - b.sort_order)
+    .map(s => ({ name: s.name, status: s.status, responsible_authority: s.responsible_authority, submitted_at: s.submitted_at, approval: approvalName(s.project_approval_id) }));
+
+  const openComments = (await where('review_comments', 'project_id', projectId))
+    .filter(c => c.status !== 'resolved')
+    .map(c => ({ comment_type: c.comment_type, body: c.body, status: c.status }));
 
   const esc = (s: any) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const badge = (s: string) => `<span class="badge b-${esc(s)}">${esc(s).replace(/_/g, ' ')}</span>`;
+  const municipality_name = munis[p.municipality_id]?.name ?? '';
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Status Report — ${esc(p.name)}</title>
 <style>
@@ -51,7 +59,7 @@ th{background:#f7fafc} .badge{padding:.1rem .45rem;border-radius:9999px;font-siz
 <p class="muted">Generated ${new Date().toISOString().slice(0, 10)}</p>
 <h2>Project</h2>
 <table><tr><th>Name</th><td>${esc(p.name)}</td></tr>
-<tr><th>Address</th><td>${esc(p.address)}, ${esc(p.municipality_name)}, RI</td></tr>
+<tr><th>Address</th><td>${esc(p.address)}, ${esc(municipality_name)}, RI</td></tr>
 <tr><th>Development</th><td>${esc(p.units)} units — ${esc(p.dev_type)} (${esc(p.construction_kind).replace(/_/g, ' ')})</td></tr>
 <tr><th>Applicant</th><td>${esc(p.applicant_name)}${p.representative_name ? ' / Rep: ' + esc(p.representative_name) : ''}</td></tr>
 <tr><th>Status</th><td>${badge(p.status)}</td></tr></table>

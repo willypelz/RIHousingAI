@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { query } from '../db/pool.js';
+import { insert, where, getById, updateById, now, indexBy, sortBy } from '../db/firestore.js';
 import { requireAuth, requireProjectAccess } from '../middleware/auth.js';
 import { audit } from '../middleware/audit.js';
 
@@ -60,14 +60,24 @@ export const documentsRouter = Router();
 documentsRouter.use(requireAuth);
 
 documentsRouter.get('/:projectId/documents', requireProjectAccess(), async (req, res) => {
-  const { rows } = await query(
-    `SELECT d.*, ci.title AS checklist_item_title,
-       (SELECT json_agg(json_build_object('id', v.id, 'version', v.version, 'original_name', v.original_name,
-         'uploaded_at', v.uploaded_at, 'size_bytes', v.size_bytes, 'uploaded_by', u.name) ORDER BY v.version DESC)
-        FROM document_versions v JOIN users u ON u.id=v.uploaded_by WHERE v.document_id=d.id) AS versions
-     FROM documents d LEFT JOIN checklist_items ci ON ci.id=d.checklist_item_id
-     WHERE d.project_id=$1 ORDER BY d.created_at DESC`, [req.params.projectId]);
-  res.json({ documents: rows });
+  const projectId = Number(req.params.projectId);
+  const docs = sortBy(await where('documents', 'project_id', projectId), 'created_at', 'desc');
+  const versions = await where('document_versions', 'project_id', projectId);
+  const items = indexBy(await where('checklist_items', 'project_id', projectId));
+  const usersById = indexBy(await (await import('../db/firestore.js')).all('users'));
+
+  res.json({
+    documents: docs.map(d => ({
+      ...d,
+      checklist_item_title: d.checklist_item_id ? items[d.checklist_item_id]?.title ?? null : null,
+      versions: sortBy(versions.filter(v => v.document_id === d.id), 'version', 'desc')
+        .map(v => ({
+          id: v.id, version: v.version, original_name: v.original_name,
+          uploaded_at: v.uploaded_at, size_bytes: v.size_bytes,
+          uploaded_by: usersById[v.uploaded_by]?.name ?? String(v.uploaded_by),
+        })),
+    })),
+  });
 });
 
 documentsRouter.post('/:projectId/documents', requireProjectAccess(), upload.single('file'), async (req, res) => {
@@ -81,45 +91,48 @@ documentsRouter.post('/:projectId/documents', requireProjectAccess(), upload.sin
   let docId = document_id ? Number(document_id) : null;
   let version = 1;
   if (docId) {
-    const d = await query(`SELECT id FROM documents WHERE id=$1 AND project_id=$2`, [docId, projectId]);
-    if (!d.rows.length) return res.status(404).json({ error: 'Document not found' });
-    version = (await query(`SELECT coalesce(max(version),0)+1 AS v FROM document_versions WHERE document_id=$1`, [docId])).rows[0].v;
+    const d = await getById('documents', docId);
+    if (!d || d.project_id !== projectId) return res.status(404).json({ error: 'Document not found' });
+    const existing = await where('document_versions', 'document_id', docId);
+    version = Math.max(0, ...existing.map(v => v.version)) + 1;
   } else {
     const category = categorize(req.file.originalname, text);
-    const r = await query(
-      `INSERT INTO documents (project_id, checklist_item_id, category, title) VALUES ($1,$2,$3,$4) RETURNING id`,
-      [projectId, checklist_item_id || null, category, title || req.file.originalname]);
-    docId = r.rows[0].id;
+    const doc = await insert('documents', {
+      project_id: projectId, checklist_item_id: checklist_item_id ? Number(checklist_item_id) : null,
+      category, title: title || req.file.originalname, created_at: now(),
+    });
+    docId = doc.id;
   }
 
-  const { rows } = await query(
-    `INSERT INTO document_versions (document_id, version, file_path, original_name, mime_type, size_bytes, sha256, extracted_text, uploaded_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id, document_id, version, original_name, uploaded_at`,
-    [docId, version, req.file.filename, req.file.originalname, req.file.mimetype, req.file.size, sha, text, req.user!.id]);
+  const v = await insert('document_versions', {
+    document_id: docId, project_id: projectId, version,
+    file_path: req.file.filename, original_name: req.file.originalname,
+    mime_type: req.file.mimetype, size_bytes: req.file.size, sha256: sha,
+    extracted_text: text, uploaded_by: req.user!.id, uploaded_at: now(),
+  });
 
   await audit(req.user!.id, 'document.upload', 'document', docId, { version, name: req.file.originalname });
-  res.status(201).json({ version: rows[0] });
+  res.status(201).json({ version: { id: v.id, document_id: docId, version, original_name: v.original_name, uploaded_at: v.uploaded_at } });
 });
 
 documentsRouter.get('/:projectId/documents/versions/:versionId/download', requireProjectAccess(), async (req, res) => {
-  const { rows } = await query(
-    `SELECT v.file_path, v.original_name, v.mime_type FROM document_versions v
-     JOIN documents d ON d.id=v.document_id WHERE v.id=$1 AND d.project_id=$2`,
-    [req.params.versionId, req.params.projectId]);
-  if (!rows.length) return res.status(404).json({ error: 'Not found' });
-  const filePath = path.join(UPLOAD_DIR, path.basename(rows[0].file_path));
+  const v = await getById('document_versions', req.params.versionId);
+  if (!v || v.project_id !== Number(req.params.projectId)) return res.status(404).json({ error: 'Not found' });
+  const filePath = path.join(UPLOAD_DIR, path.basename(v.file_path));
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File missing from storage' });
-  res.setHeader('Content-Type', rows[0].mime_type || 'application/octet-stream');
-  res.setHeader('Content-Disposition', `attachment; filename="${rows[0].original_name.replace(/"/g, '')}"`);
+  res.setHeader('Content-Type', v.mime_type || 'application/octet-stream');
+  res.setHeader('Content-Disposition', `attachment; filename="${v.original_name.replace(/"/g, '')}"`);
   fs.createReadStream(filePath).pipe(res);
 });
 
 documentsRouter.patch('/:projectId/documents/:docId', requireProjectAccess(), async (req, res) => {
   const { category, title, checklist_item_id } = req.body || {};
-  const { rows } = await query(
-    `UPDATE documents SET category=coalesce($1,category), title=coalesce($2,title), checklist_item_id=coalesce($3,checklist_item_id)
-     WHERE id=$4 AND project_id=$5 RETURNING *`,
-    [category ?? null, title ?? null, checklist_item_id ?? null, req.params.docId, req.params.projectId]);
-  if (!rows.length) return res.status(404).json({ error: 'Not found' });
-  res.json({ document: rows[0] });
+  const d = await getById('documents', req.params.docId);
+  if (!d || d.project_id !== Number(req.params.projectId)) return res.status(404).json({ error: 'Not found' });
+  const updated = await updateById('documents', d.id, {
+    category: category ?? d.category,
+    title: title ?? d.title,
+    checklist_item_id: checklist_item_id ?? d.checklist_item_id,
+  });
+  res.json({ document: updated });
 });
