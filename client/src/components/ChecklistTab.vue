@@ -75,6 +75,15 @@ async function setStatus(item: any, status: string) {
   await load();
 }
 
+async function setTargetDate(item: any, date: string) {
+  await api.patch(`/projects/${props.projectId}/checklist/${item.id}`, { target_date: date || null });
+  await load();
+}
+
+const today = new Date().toISOString().slice(0, 10);
+const isMissed = (item: any) =>
+  item.target_date && item.target_date < today && !['complete', 'not_applicable'].includes(item.status);
+
 async function addComment(item: any) {
   const f = newComment.value[item.id];
   if (!f?.body) return;
@@ -227,6 +236,7 @@ onMounted(load);
               <p class="text-sm font-medium" :class="item.status === 'complete' ? 'text-slate-400 line-through' : item.status === 'not_applicable' ? 'text-slate-400' : 'text-slate-800'">{{ item.title }}</p>
               <span v-if="item.status === 'in_progress'" class="badge bg-brand-50 text-brand-700">in progress</span>
               <span v-if="item.status === 'not_applicable'" class="badge bg-slate-100 text-slate-500">n/a</span>
+              <span v-if="isMissed(item)" class="badge bg-rose-100 text-rose-700"><AppIcon name="bell" :size="10" /> target missed</span>
             </div>
             <p class="mt-0.5 text-xs leading-relaxed text-slate-500">{{ item.description }}</p>
             <p v-if="item.item_type === 'fee' && item.fee_note" class="mt-0.5 text-[11px] text-amber-700">Fee: {{ item.fee_note }}</p>
@@ -237,6 +247,11 @@ onMounted(load);
             </div>
           </div>
           <div class="flex shrink-0 items-center gap-1.5">
+            <input type="date" :value="item.target_date || ''" :aria-label="`Your target date for ${item.title}`"
+              :title="'Your planning target — not an official deadline. Shows on the timeline and calendar.'"
+              class="rounded-lg border-0 bg-transparent p-1 text-[11px] ring-1 transition-all focus-visible:outline-none focus-visible:ring-brand-500"
+              :class="isMissed(item) ? 'text-rose-600 ring-rose-200' : item.target_date ? 'text-slate-600 ring-slate-200' : 'text-slate-400 ring-transparent hover:ring-slate-200'"
+              @change="setTargetDate(item, ($event.target as HTMLInputElement).value)" />
             <button class="relative rounded-lg p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
               :class="openThread === item.id ? 'bg-brand-50 text-brand-700' : openCount(item.id) ? 'text-amber-600 hover:bg-amber-50' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'"
               :aria-expanded="openThread === item.id"

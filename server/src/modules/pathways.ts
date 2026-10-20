@@ -191,21 +191,29 @@ pathwaysRouter.get('/:projectId/checklist', requireProjectAccess(), async (req, 
   res.json({ items: rows });
 });
 
-/** Update a checklist item's status. */
+/** Update a checklist item's status and/or the applicant's own planning target date.
+ *  target_date is the user's plan — never an official deadline. */
 pathwaysRouter.patch('/:projectId/checklist/:itemId', requireProjectAccess(), async (req, res) => {
-  const { status } = req.body || {};
-  if (!['pending','in_progress','complete','not_applicable'].includes(status)) {
+  const { status, target_date } = req.body || {};
+  if (status !== undefined && !['pending','in_progress','complete','not_applicable'].includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
+  }
+  if (target_date !== undefined && target_date !== null && !/^\d{4}-\d{2}-\d{2}$/.test(String(target_date))) {
+    return res.status(400).json({ error: 'target_date must be YYYY-MM-DD or null' });
   }
   const item = await getById('checklist_items', req.params.itemId);
   if (!item || item.project_id !== Number(req.params.projectId)) {
     return res.status(404).json({ error: 'Checklist item not found' });
   }
-  const updated = await updateById('checklist_items', item.id, {
-    status,
-    completed_at: status === 'complete' ? now() : null,
-    completed_by: status === 'complete' ? req.user!.id : null,
-  });
-  await audit(req.user!.id, 'checklist.update', 'checklist_item', item.id, { status });
+  const updates: Record<string, any> = {};
+  if (status !== undefined) {
+    updates.status = status;
+    updates.completed_at = status === 'complete' ? now() : null;
+    updates.completed_by = status === 'complete' ? req.user!.id : null;
+  }
+  if (target_date !== undefined) updates.target_date = target_date;
+  if (!Object.keys(updates).length) return res.status(400).json({ error: 'No fields to update' });
+  const updated = await updateById('checklist_items', item.id, updates);
+  await audit(req.user!.id, 'checklist.update', 'checklist_item', item.id, { status, target_date });
   res.json({ item: updated });
 });

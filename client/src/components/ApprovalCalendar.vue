@@ -11,6 +11,7 @@ const TYPE_CLS: Record<string, string> = {
   decision: 'bg-violet-100 text-violet-800',
   inspection: 'bg-cyan-100 text-cyan-800',
   task: 'bg-rose-100 text-rose-700',
+  checklist: 'bg-sky-100 text-sky-800',
 };
 
 const cursor = ref(new Date(props.today + 'T12:00:00'));
@@ -64,8 +65,9 @@ const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
           </span>
           <div v-for="(e, i) in day.events.slice(0, 2)" :key="i"
             class="mt-0.5 truncate rounded px-1 py-0.5 text-[10px] font-semibold leading-tight"
-            :class="TYPE_CLS[e.type]" :title="`${e.title}${e.detail ? ' — ' + e.detail : ''}`">
-            {{ e.title }}
+            :class="e.missed ? 'bg-rose-200 text-rose-900' : TYPE_CLS[e.type]"
+            :title="`${e.title}${e.detail ? ' — ' + e.detail : ''}${e.missed ? ' (missed target)' : ''}`">
+            {{ e.missed ? '⚑ ' : '' }}{{ e.title }}
           </div>
           <p v-if="day.events.length > 2" class="ml-1 text-[9px] font-semibold text-slate-400">+{{ day.events.length - 2 }} more</p>
         </div>

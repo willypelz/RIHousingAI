@@ -88,8 +88,21 @@ workflowRouter.get('/:projectId/timeline', requireProjectAccess(), async (req, r
     if (t.verified_due_date && t.status === 'open') events.push({ date: String(t.verified_due_date).slice(0, 10), type: 'task', title: `Task due: ${t.title}`, detail: `Waiting on ${t.waiting_on}` });
   }
 
+  // Checklist items with the applicant's own planning target date (never official deadlines).
+  // "missed" = target passed while the item is still open.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  for (const ci of await where('checklist_items', 'project_id', projectId)) {
+    if (!ci.target_date) continue;
+    const open = !['complete', 'not_applicable'].includes(ci.status);
+    events.push({
+      date: String(ci.target_date).slice(0, 10), type: 'checklist',
+      title: ci.title, detail: `Your target · ${approvalName(ci.project_approval_id) ?? ''}`,
+      status: ci.status, missed: open && String(ci.target_date).slice(0, 10) < todayStr,
+    });
+  }
+
   events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-  res.json({ events, today: new Date().toISOString().slice(0, 10) });
+  res.json({ events, today: todayStr });
 });
 
 /** Progress & delay overview. Never labels anything overdue without a verified deadline. */

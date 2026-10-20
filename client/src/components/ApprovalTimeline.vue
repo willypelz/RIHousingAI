@@ -11,6 +11,7 @@ const STYLE: Record<string, { icon: string; cls: string }> = {
   decision: { icon: 'scale', cls: 'bg-violet-100 text-violet-700' },
   inspection: { icon: 'clipboard', cls: 'bg-cyan-100 text-cyan-700' },
   task: { icon: 'check', cls: 'bg-rose-100 text-rose-600' },
+  checklist: { icon: 'clipboard', cls: 'bg-sky-100 text-sky-700' },
 };
 
 const fmt = (d: string) => new Date(d + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -34,8 +35,10 @@ const upcomingIdx = computed(() => props.events.findIndex(e => e.date > props.to
             <AppIcon :name="STYLE[e.type]?.icon || 'info'" :size="12" />
           </span>
           <div class="flex flex-wrap items-baseline gap-x-2">
-            <time class="text-xs font-semibold" :class="e.date > today ? 'text-brand-600' : 'text-slate-400'" :datetime="e.date">{{ fmt(e.date) }}</time>
-            <span class="text-sm font-semibold text-slate-800">{{ e.title }}</span>
+            <time class="text-xs font-semibold" :class="e.missed ? 'text-rose-600' : e.date > today ? 'text-brand-600' : 'text-slate-400'" :datetime="e.date">{{ fmt(e.date) }}</time>
+            <span class="text-sm font-semibold" :class="e.missed ? 'text-rose-700' : 'text-slate-800'">{{ e.title }}</span>
+            <span v-if="e.missed" class="badge bg-rose-100 text-rose-700">missed target</span>
+            <span v-else-if="e.type === 'checklist' && e.status === 'complete'" class="badge bg-emerald-100 text-emerald-700">done</span>
           </div>
           <p v-if="e.detail" class="mt-0.5 text-xs text-slate-500">{{ e.detail }}</p>
         </li>
