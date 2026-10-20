@@ -1,5 +1,4 @@
-import { pool } from './pool.js';
-import { migrate } from './migrate.js';
+import { insert, all, col, today } from './firestore.js';
 
 const RI_MUNICIPALITIES = [
   'Barrington','Bristol','Burrillville','Central Falls','Charlestown','Coventry','Cranston','Cumberland',
@@ -11,27 +10,27 @@ const RI_MUNICIPALITIES = [
 ];
 
 export async function seed() {
-  await migrate();
-  const { rows: existing } = await pool.query(`SELECT 1 FROM municipalities LIMIT 1`);
+  const existing = await all('municipalities');
   if (existing.length) { console.log('already seeded'); return; }
 
   // Municipalities
+  let cumberlandId = 0;
   for (const name of RI_MUNICIPALITIES) {
-    await pool.query(
-      `INSERT INTO municipalities (name, coverage_status, website) VALUES ($1, $2, $3)`,
-      [name, name === 'Cumberland' ? 'partial' : 'planned', name === 'Cumberland' ? 'https://www.cumberlandri.org' : null]
-    );
+    const m = await insert('municipalities', {
+      name, state: 'RI',
+      coverage_status: name === 'Cumberland' ? 'partial' : 'planned',
+      website: name === 'Cumberland' ? 'https://www.cumberlandri.org' : null,
+    });
+    if (name === 'Cumberland') cumberlandId = m.id;
   }
-  const cumberlandId = (await pool.query(`SELECT id FROM municipalities WHERE name='Cumberland'`)).rows[0].id;
 
   // Agencies
   const agency = async (level: string, name: string, dept: string | null, phone: string | null, email: string | null, address: string | null, website: string | null, muni = true) => {
-    const r = await pool.query(
-      `INSERT INTO agencies (municipality_id, level, name, department, phone, email, address, website)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-      [muni ? cumberlandId : null, level, name, dept, phone, email, address, website]
-    );
-    return r.rows[0].id as number;
+    const a = await insert('agencies', {
+      municipality_id: muni ? cumberlandId : null, level, name,
+      department: dept, phone, email, address, website,
+    });
+    return a.id as number;
   };
 
   const planningId = await agency('municipal', 'Town of Cumberland', 'Planning & Community Development', '(401) 728-2400', null, '45 Broad Street, Cumberland, RI 02864', 'https://www.cumberlandri.org/180/Planning-Community-Development');
@@ -47,12 +46,13 @@ export async function seed() {
   // Official sources. last_verified_at reflects when this seed data was curated;
   // the UI must instruct users to re-verify with the authority.
   const source = async (agencyId: number, authority: string, title: string, url: string, summary: string, content: string, feesNote: string | null, processing: string | null) => {
-    const r = await pool.query(
-      `INSERT INTO official_sources (agency_id, authority, title, url, summary, content, fees_note, processing_estimate, last_verified_at, doc_version)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8, CURRENT_DATE, 'seed-curated') RETURNING id`,
-      [agencyId, authority, title, url, summary, content, feesNote, processing]
-    );
-    return r.rows[0].id as number;
+    const s = await insert('official_sources', {
+      agency_id: agencyId, authority, title, url, summary, content,
+      fees_note: feesNote, processing_estimate: processing,
+      last_verified_at: today(), doc_version: 'seed-curated',
+      published_date: null, effective_date: null,
+    });
+    return s.id as number;
   };
 
   const sPlanning = await source(planningId,
@@ -157,11 +157,10 @@ Confirm sewer availability for the specific parcel with DPW.`,
 
   // Approval types with applicability rules
   const at = async (code: string, name: string, category: string, description: string, agencyId: number, rules: object, sourceId: number) => {
-    await pool.query(
-      `INSERT INTO approval_types (code, name, category, description, agency_id, applicability_rules, source_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [code, name, category, description, agencyId, JSON.stringify(rules), sourceId]
-    );
+    await insert('approval_types', {
+      code, name, category, description, agency_id: agencyId,
+      applicability_rules: rules, source_id: sourceId,
+    });
   };
 
   await at('planning_major_land_dev', 'Major Land Development Review (Planning Board)', 'planning',
@@ -201,8 +200,4 @@ Confirm sewer availability for the specific parcel with DPW.`,
     buildingId, { min_units: 1 }, sSbc);
 
   console.log('seed complete');
-}
-
-if (process.argv[1] && process.argv[1].endsWith('seed.ts')) {
-  seed().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
 }
