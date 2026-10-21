@@ -28,6 +28,13 @@ An AI-powered platform covering the full residential development journey in Rhod
 9. **Progress & delays** — elapsed time, waiting-on tracking, bottleneck hints; nothing is called "overdue" without a verified deadline
 10. **Roles & access control** — developer, architect/engineer, contractor, consultant, municipal staff, admin; project membership gates access; full audit log
 
+## Hosting
+
+- **Frontend:** Firebase Hosting (free Spark) — https://rihousingai-25382.web.app
+- **Backend API:** Vercel serverless (free Hobby, 60s function limit) — Express wrapped in `server/api/index.ts`
+- **Database:** Firestore (free Spark, always on)
+- **Uploads:** stored as chunked Firestore documents (10MB max per file) since serverless disks are ephemeral
+
 ## Setup
 
 Prereqs: Node 18+, PostgreSQL running locally.

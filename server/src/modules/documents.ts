@@ -1,15 +1,10 @@
 import { Router } from 'express';
 import multer from 'multer';
 import crypto from 'crypto';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import { insert, where, getById, updateById, now, indexBy, sortBy } from '../db/firestore.js';
+import { saveFile, readFile, MAX_FILE_BYTES } from '../db/fileStore.js';
 import { requireAuth, requireProjectAccess } from '../middleware/auth.js';
 import { audit } from '../middleware/audit.js';
-
-const UPLOAD_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'uploads');
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const ALLOWED_MIME = new Set([
   'application/pdf', 'image/png', 'image/jpeg',
@@ -17,23 +12,22 @@ const ALLOWED_MIME = new Set([
   'text/plain',
 ]);
 
+// Memory storage + Firestore chunk persistence: works on serverless hosts with
+// ephemeral disks and keeps files durable across instances.
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (_req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${path.extname(file.originalname)}`),
-  }),
-  limits: { fileSize: 25 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE_BYTES },
   fileFilter: (_req, file, cb) => cb(null, ALLOWED_MIME.has(file.mimetype)),
 });
 
-async function extractText(filePath: string, mime: string): Promise<string | null> {
+async function extractText(buf: Buffer, mime: string): Promise<string | null> {
   try {
     if (mime === 'application/pdf') {
       const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js') as any;
-      const data = await pdfParse(fs.readFileSync(filePath));
+      const data = await pdfParse(buf);
       return (data.text || '').slice(0, 100_000);
     }
-    if (mime === 'text/plain') return fs.readFileSync(filePath, 'utf8').slice(0, 100_000);
+    if (mime === 'text/plain') return buf.toString('utf8').slice(0, 100_000);
   } catch { /* extraction is best-effort */ }
   return null;
 }
@@ -81,12 +75,13 @@ documentsRouter.get('/:projectId/documents', requireProjectAccess(), async (req,
 });
 
 documentsRouter.post('/:projectId/documents', requireProjectAccess(), upload.single('file'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'A file is required (pdf, docx, png, jpg, txt; max 25MB)' });
+  if (!req.file) return res.status(400).json({ error: 'A file is required (pdf, docx, png, jpg, txt; max 10MB)' });
   const projectId = Number(req.params.projectId);
   const { document_id, title, checklist_item_id } = req.body || {};
 
-  const sha = crypto.createHash('sha256').update(fs.readFileSync(req.file.path)).digest('hex');
-  const text = await extractText(req.file.path, req.file.mimetype);
+  const buf = req.file.buffer;
+  const sha = crypto.createHash('sha256').update(buf).digest('hex');
+  const text = await extractText(buf, req.file.mimetype);
 
   let docId = document_id ? Number(document_id) : null;
   let version = 1;
@@ -106,10 +101,11 @@ documentsRouter.post('/:projectId/documents', requireProjectAccess(), upload.sin
 
   const v = await insert('document_versions', {
     document_id: docId, project_id: projectId, version,
-    file_path: req.file.filename, original_name: req.file.originalname,
+    file_path: 'firestore', original_name: req.file.originalname,
     mime_type: req.file.mimetype, size_bytes: req.file.size, sha256: sha,
     extracted_text: text, uploaded_by: req.user!.id, uploaded_at: now(),
   });
+  await saveFile(String(v.id), buf);
 
   await audit(req.user!.id, 'document.upload', 'document', docId, { version, name: req.file.originalname });
   res.status(201).json({ version: { id: v.id, document_id: docId, version, original_name: v.original_name, uploaded_at: v.uploaded_at } });
@@ -118,11 +114,11 @@ documentsRouter.post('/:projectId/documents', requireProjectAccess(), upload.sin
 documentsRouter.get('/:projectId/documents/versions/:versionId/download', requireProjectAccess(), async (req, res) => {
   const v = await getById('document_versions', req.params.versionId);
   if (!v || v.project_id !== Number(req.params.projectId)) return res.status(404).json({ error: 'Not found' });
-  const filePath = path.join(UPLOAD_DIR, path.basename(v.file_path));
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File missing from storage' });
+  const buf = await readFile(String(v.id));
+  if (!buf) return res.status(404).json({ error: 'File missing from storage' });
   res.setHeader('Content-Type', v.mime_type || 'application/octet-stream');
   res.setHeader('Content-Disposition', `attachment; filename="${v.original_name.replace(/"/g, '')}"`);
-  fs.createReadStream(filePath).pipe(res);
+  res.send(buf);
 });
 
 documentsRouter.patch('/:projectId/documents/:docId', requireProjectAccess(), async (req, res) => {

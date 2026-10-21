@@ -49,7 +49,7 @@ onMounted(load);
     <div class="card">
       <h2 class="mb-4 text-[1.05rem] font-bold text-slate-900">Upload document</h2>
       <div class="grid gap-3 sm:grid-cols-2">
-        <div><label class="label">File (pdf, docx, png, jpg, txt — 25MB max)</label>
+        <div><label class="label">File (pdf, docx, png, jpg, txt — 10MB max)</label>
           <input type="file" @change="onFile" class="input" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.txt" /></div>
         <div><label class="label">Title (optional)</label><input v-model="title" class="input" /></div>
         <div><label class="label">Link to checklist item (optional)</label>
